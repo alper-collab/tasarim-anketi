@@ -34,34 +34,31 @@ const runMiddleware = (req, res, fn) => {
 
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
-  // ÖNEMLİ GÜVENLİK KONTROLÜ
-  // vercel.json'da Access-Control-Allow-Origin: '*' ayarlandığı için,
-  // burada hangi kaynakların isteği işleme alabileceğini KESİNLİKLE kontrol etmeliyiz.
   const origin = req.headers.origin;
-  const isAllowed = origin && allowedOrigins.some(pattern => 
-    (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern)
-  );
-
-  if (!isAllowed) {
-    return res.status(403).json({ error: 'Erişim engellendi: İzin verilmeyen kaynak.' });
-  }
   
-  // CORS başlıkları artık vercel.json tarafından yönetildiği için, buradaki `origin` başlığını
-  // dinamik olarak ayarlamak en doğru yaklaşımdır.
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  // 1. Gelen isteğin kaynağını kontrol et ve dinamik olarak CORS başlıklarını ayarla
+  if (origin && allowedOrigins.some(pattern => (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern))) {
+    res.setHeader('Access-Control-Allow-Origin', origin); // '*' yerine spesifik origin
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+  } else if (origin) {
+    // Eğer kaynak izin verilenler listesinde yoksa, erişimi reddet
+    return res.status(403).json({ error: `Erişim reddedildi. İzin verilmeyen kaynak: ${origin}` });
+  }
 
-  // Vercel.json 'OPTIONS' isteklerini zaten yanıtlar, bu blok bir ek güvence katmanıdır.
+  // 2. Tarayıcının 'preflight' (ön kontrol) isteğini anında işle
+  // Bu, tarayıcının asıl POST isteğini göndermeden önce izinleri kontrol etmek için gönderdiği bir OPTIONS isteğidir.
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    return res.status(204).end(); // 204 No Content ile yanıtla ve işlemi bitir.
   }
 
-  // Sadece POST metoduyla gelen istekleri kabul et.
+  // 3. Sadece POST isteklerine izin ver (OPTIONS zaten işlendi)
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST', 'OPTIONS']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
-    return;
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
+  // 4. Asıl e-posta gönderme mantığı
   try {
     // form-data'yı işlemesi için multer middleware'ini çalıştır.
     await runMiddleware(req, res, upload);
@@ -79,8 +76,6 @@ module.exports = async (req, res) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      debug: true, 
-      logger: true 
     });
 
     // E-posta gövdesini (HTML formatında) oluştur.
@@ -107,7 +102,7 @@ module.exports = async (req, res) => {
     await transporter.sendMail(mailOptions);
     
     // Başarılı olursa istemciye olumlu yanıt dön.
-    res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
+    return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
 
   } catch (error) {
     console.error('API Hatası:', error);
