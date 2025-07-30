@@ -1,19 +1,9 @@
+
 {
   "functions": {
     "api/send-email.js": {
       "memory": 1024,
       "maxDuration": 30
     }
-  },
-  "headers": [
-    {
-      "source": "/api/send-email",
-      "headers": [
-        { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
-        { "key": "Access-Control-Allow-Methods", "value": "POST, OPTIONS" },
-        { "key": "Access-Control-Allow-Headers", "value": "Origin, X-Requested-With, Content-Type, Accept" }
-      ]
-    }
-  ]
+  }
 }
