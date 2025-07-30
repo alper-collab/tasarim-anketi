@@ -1,20 +1,21 @@
 // /api/send-email.js
-import nodemailer from 'nodemailer';
-import multer from 'multer';
 
-// İzin verilen tek kaynak. Bu, güvenliği artırır.
+// Node.js'in standart modül sistemini (CommonJS) kullanıyoruz.
+// Bu, Vercel ortamıyla en yüksek uyumluluğu sağlar.
+const nodemailer = require('nodemailer');
+const multer = require('multer');
+
 const ALLOWED_ORIGIN = 'https://dekorla.co';
 
-// Multer'ı yapılandır: dosyaları bellekte tut ve 15MB ile sınırla.
+// Multer yapılandırması
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 15 * 1024 * 1024, // 15 MB
   },
-}).any(); // Her türlü dosyayı kabul et.
+}).any();
 
-// Express-tarzı middleware'i (multer gibi) Vercel'in sunucusuz fonksiyonunda
-// async/await ile kullanmak için yardımcı fonksiyon.
+// Middleware'i Promise tabanlı hale getiren yardımcı fonksiyon
 function runMiddleware(req, res, fn) {
   return new Promise((resolve, reject) => {
     fn(req, res, (result) => {
@@ -26,12 +27,12 @@ function runMiddleware(req, res, fn) {
   });
 }
 
-// Ana sunucusuz fonksiyonumuz. Modern `export default` yapısı kullanılıyor.
-export default async function handler(req, res) {
+// Ana sunucusuz fonksiyon
+module.exports = async (req, res) => {
   const origin = req.headers.origin;
 
-  // Güvenlik: Sadece izin verilen kaynaktan gelen isteklere CORS başlıklarını ekle.
-  // Bu, her yanıtta olmalıdır.
+  // ÖNCE: Her zaman CORS başlıklarını ayarla (eğer kaynak uygunsa).
+  // Bu, tarayıcının ilk "preflight" (OPTIONS) isteğine doğru yanıtı garanti eder.
   if (origin === ALLOWED_ORIGIN) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -39,32 +40,35 @@ export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   }
 
-  // Tarayıcıların "preflight" (OPTIONS) isteğini KESİNLİKLE ele al.
-  // Bu, asıl POST isteğinin engellenmesini önler.
+  // Tarayıcının ön kontrol isteğini (preflight) ele al.
+  // Bu, asıl POST isteğinin engellenmesini önleyen en kritik adımdır.
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
+    res.status(200).end();
+    return;
   }
 
   // Sadece POST isteklerine devam et.
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST', 'OPTIONS']);
-    return res.status(405).end('Method Not Allowed');
+    res.status(405).end('Method Not Allowed');
+    return;
   }
-
-  // Güvenlik: POST isteği için kaynağı tekrar kontrol et.
+  
+  // Güvenlik: Asıl POST isteği için kaynağı tekrar kontrol et.
+  // Bu, OPTIONS kontrolünden sonra ek bir güvenlik katmanıdır.
   if (origin !== ALLOWED_ORIGIN) {
-    return res.status(403).json({ error: 'Forbidden' });
+    res.status(403).json({ error: 'Forbidden: Invalid origin.' });
+    return;
   }
 
   try {
-    // Multer middleware'ini çalıştırarak form verilerini ve dosyaları işle.
+    // Form verilerini ve dosyaları işle
     await runMiddleware(req, res, upload);
 
-    // Form verilerini ayrıştır.
     const submissionData = JSON.parse(req.body.submission);
     const files = req.files;
 
-    // Nodemailer'ı ortam değişkenleri (environment variables) ile güvenli bir şekilde ayarla.
+    // Nodemailer'ı ortam değişkenleri ile güvenli bir şekilde ayarla
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT, 10),
@@ -75,13 +79,13 @@ export default async function handler(req, res) {
       },
     });
 
-    // E-posta gövdesini HTML olarak oluştur.
+    // E-posta gövdesini oluştur
     let emailBody = '<h1>Yeni Tasarım Keşif Anketi Sonucu</h1>';
     for (const [question, answer] of Object.entries(submissionData.answers)) {
       emailBody += `<p><b>${question}:</b></p><p>${String(answer).replace(/\n/g, '<br>')}</p><hr>`;
     }
 
-    // E-posta seçeneklerini tanımla.
+    // E-posta seçenekleri
     const mailOptions = {
       from: `"Dekorla Anket" <${process.env.SMTP_SENDER_EMAIL}>`,
       to: process.env.SMTP_RECIPIENT_EMAIL,
@@ -95,21 +99,21 @@ export default async function handler(req, res) {
       })),
     };
 
-    // E-postayı gönder.
+    // E-postayı gönder
     await transporter.sendMail(mailOptions);
-
-    // Her şey yolundaysa, başarı yanıtı gönder.
-    return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
+    
+    // Başarı yanıtı
+    res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
 
   } catch (error) {
     console.error('API Hatası:', error);
 
-    // Hata tipine göre istemciye anlamlı bir yanıt gönder.
     if (error instanceof multer.MulterError) {
-      return res.status(400).json({ error: `Dosya yükleme hatası: ${error.message}. Lütfen dosya boyutunu kontrol edin.` });
+      res.status(400).json({ error: `Dosya yükleme hatası: ${error.message}.` });
+      return;
     }
     
-    // Genel bir sunucu hatası durumunda.
-    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu. Lütfen daha sonra tekrar deneyin.' });
+    // Genel sunucu hatası
+    res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu.' });
   }
-}
+};
