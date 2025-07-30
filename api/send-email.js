@@ -30,27 +30,30 @@ function runMiddleware(req, res, fn) {
 export default async function handler(req, res) {
   const origin = req.headers.origin;
 
-  // Gelen isteğin kaynağını KESİNLİKLE kontrol et.
+  // Güvenlik: Sadece izin verilen kaynaktan gelen isteklere CORS başlıklarını ekle.
+  // Bu, her yanıtta olmalıdır.
   if (origin === ALLOWED_ORIGIN) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  } else {
-    // Eğer istek izin verilen kaynaktan gelmiyorsa, hiçbir başlık ayarlama.
-    // Bu, güvenlik açısından önemlidir.
   }
 
-  // Tarayıcılar, asıl POST isteğinden önce bir "preflight" (ön kontrol) isteği gönderir.
-  // Bu isteğe 204 (No Content) koduyla yanıt vermek, CORS için ZORUNLUDUR.
+  // Tarayıcıların "preflight" (OPTIONS) isteğini KESİNLİKLE ele al.
+  // Bu, asıl POST isteğinin engellenmesini önler.
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    return res.status(200).end();
   }
 
-  // Sadece POST isteklerine izin ver.
+  // Sadece POST isteklerine devam et.
   if (req.method !== 'POST') {
-    res.setHeader('Allow', ['POST']);
+    res.setHeader('Allow', ['POST', 'OPTIONS']);
     return res.status(405).end('Method Not Allowed');
+  }
+
+  // Güvenlik: POST isteği için kaynağı tekrar kontrol et.
+  if (origin !== ALLOWED_ORIGIN) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   try {
@@ -64,8 +67,8 @@ export default async function handler(req, res) {
     // Nodemailer'ı ortam değişkenleri (environment variables) ile güvenli bir şekilde ayarla.
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: process.env.SMTP_PORT,
-      secure: process.env.SMTP_PORT == 465, // Eğer port 465 ise SSL kullan.
+      port: parseInt(process.env.SMTP_PORT, 10),
+      secure: process.env.SMTP_PORT == '465',
       auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
