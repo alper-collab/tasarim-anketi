@@ -2,6 +2,16 @@
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 
+// --- Güvenlik: İzin Verilen Kaynaklar (Origins) ---
+// Sadece bu kaynaklardan gelen isteklere izin verilir.
+const allowedOrigins = [
+  'https://dekorla.co',
+  'https://www.dekorla.co',
+  'https://dekorla.myshopify.com',
+  /https:\/\/tasarim-anketi-.*\.vercel\.app$/, // Vercel önizleme URL'leri için Regex
+  'http://localhost:3000', // Yerel geliştirme ortamı
+];
+
 // Multer yapılandırması (dosya yükleme işlemi için)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -24,40 +34,26 @@ const runMiddleware = (req, res, fn) => {
 
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
-  // --- KESİN CORS ÇÖZÜMÜ ---
-  // Karmaşık mantık yerine, her şeyin başında CORS başlıklarını doğrudan ayarlıyoruz.
-  // Bu, Vercel'in preflight (OPTIONS) isteklerini doğru işlemesini garanti eder.
-
-  const allowedOrigins = [
-    'https://dekorla.co',
-    'https://www.dekorla.co',
-    'https://dekorla.myshopify.com',
-    // Geliştirme ve önizleme ortamları için esnek kurallar
-    /https:\/\/tasarim-anketi-.*\.vercel\.app$/,
-    'http://localhost:3000', // Yerel geliştirme için
-  ];
-
+  // ÖNEMLİ GÜVENLİK KONTROLÜ
+  // vercel.json'da Access-Control-Allow-Origin: '*' ayarlandığı için,
+  // burada hangi kaynakların isteği işleme alabileceğini KESİNLİKLE kontrol etmeliyiz.
   const origin = req.headers.origin;
+  const isAllowed = origin && allowedOrigins.some(pattern => 
+    (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern)
+  );
+
+  if (!isAllowed) {
+    return res.status(403).json({ error: 'Erişim engellendi: İzin verilmeyen kaynak.' });
+  }
   
-  // İzin verilenler listesindeki bir kaynaktan geliyorsa, o kaynağı başlığa ekle.
-  if (origin && allowedOrigins.some(pattern => (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern))) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (!origin) {
-    // Köken belirtilmemişse (örneğin, sunucudan sunucuya istek), belirli bir varsayılan değere izin verilebilir.
-    // Şimdilik en yaygın olanı ekliyoruz.
-    res.setHeader('Access-Control-Allow-Origin', 'https://dekorla.co');
-  }
+  // CORS başlıkları artık vercel.json tarafından yönetildiği için, buradaki `origin` başlığını
+  // dinamik olarak ayarlamak en doğru yaklaşımdır.
+  res.setHeader('Access-Control-Allow-Origin', origin);
 
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-
-  // Tarayıcının preflight isteğine anında yanıt ver ve işlemi sonlandır.
+  // Vercel.json 'OPTIONS' isteklerini zaten yanıtlar, bu blok bir ek güvence katmanıdır.
   if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
+    return res.status(204).end();
   }
-  // --- CORS ÇÖZÜMÜ SONU ---
 
   // Sadece POST metoduyla gelen istekleri kabul et.
   if (req.method !== 'POST') {
@@ -83,7 +79,6 @@ module.exports = async (req, res) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      // Hataları daha iyi ayıklamak için debug ve logger seçenekleri
       debug: true, 
       logger: true 
     });
