@@ -5,6 +5,8 @@ const multer = require('multer');
 // Güvenlik: İzin verilen kaynakların bir listesi.
 const allowedOrigins = [
   'https://dekorla.co',
+  'https://www.dekorla.co', // WWW alt alan adı için eklendi
+  'https://dekorla.myshopify.com', // Varsayılan Shopify alanı için eklendi
   // Vercel'in önizleme (preview) ve test ortamları için esnek bir kural ekliyoruz.
   // Bu, 'tasarim-anketi-git-master-alper-boyers-projects.vercel.app' gibi tüm adresleri kapsar.
   /https:\/\/[a-z0-9-]+\.vercel\.app$/
@@ -36,6 +38,7 @@ module.exports = async (req, res) => {
 
   // Gelen isteğin kaynağının izin verilenler listesinde olup olmadığını kontrol et.
   const isAllowed = allowedOrigins.some(pattern => {
+    if (!origin) return false; // Origin başlığı yoksa reddet
     if (pattern instanceof RegExp) {
       return pattern.test(origin);
     }
@@ -51,7 +54,8 @@ module.exports = async (req, res) => {
 
   // Tarayıcının ön kontrol (preflight) isteğini ele al.
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
+    // isAllowed ise yukarıda başlıklar ayarlandı. Değilse, başlıklar olmadan 204 döner ve tarayıcı reddeder.
+    res.status(204).end();
     return;
   }
 
@@ -64,7 +68,7 @@ module.exports = async (req, res) => {
 
   // Asıl POST isteği için güvenlik kontrolü.
   if (!isAllowed) {
-    res.status(403).json({ error: 'Forbidden: Invalid origin.' });
+    res.status(403).json({ error: `Forbidden: Origin '${origin}' is not allowed.` });
     return;
   }
 
