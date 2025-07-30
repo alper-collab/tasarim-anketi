@@ -9,6 +9,7 @@ window.addEventListener('load', () => {
     const { useState, useMemo, useCallback, createElement, Fragment } = React;
     const { createRoot } = ReactDOM;
 
+    // SORUN GİDERME İÇİN BASİTLEŞTİRİLDİ: Sadece 2 soru aktif.
     const questions = [{
         id: 'email',
         text: 'Email',
@@ -16,125 +17,12 @@ window.addEventListener('load', () => {
         required: true,
         layout: 'horizontal'
     }, {
-        id: 'space_photos',
-        text: 'Mekanın farklı köşelerden çekilmiş fotoğraflarını yükler misin?',
-        type: 'file',
-        required: true,
-        multiple: true,
-        accept: 'image/*',
-        layout: 'horizontal'
-    }, {
-        id: 'floor_plan',
-        text: 'Mekanın ölçülü planını bizimle paylaşır mısın?',
-        type: 'file',
-        required: true,
-        multiple: false,
-        accept: 'image/*,application/pdf,.dwg,.dxf',
-        layout: 'horizontal'
-    }, {
-        id: 'inspiration_photos',
-        text: 'Beğendiğin iç mekan örnekleri var mı?',
-        type: 'file',
-        required: true,
-        multiple: true,
-        accept: 'image/*',
-        layout: 'horizontal'
-    }, {
-        id: 'atmosphere',
-        text: 'Mekanında nasıl bir atmosfer hayal ediyorsun?',
-        type: 'textarea',
-        required: true,
-        layout: 'horizontal'
-    }, {
-        id: 'users',
-        text: 'Bu mekanı kimler kullanacak?',
-        type: 'textarea',
-        required: true,
-        layout: 'horizontal'
-    }, {
-        id: 'functions',
-        text: 'Seçtiğin mekan için eklemek istediğin işlev var mı?',
-        type: 'checkbox',
-        options: ['Dinlenme ve Uyuma', 'Oturma ve Misafir Ağırlama', 'Çalışma Alanı', 'Hobi alanı', 'Diğer'],
-        required: false,
-        hasOtherSpecify: true,
-        layout: 'horizontal'
-    }, {
-        id: 'usage_times',
-        text: 'Günün hangi saatlerinde bu alanı aktif olarak kullanıyorsun?',
-        type: 'checkbox',
-        options: ['Sabah', 'Öğle', 'Akşam', 'Gece'],
-        required: false,
-        layout: 'vertical'
-    }, {
-        id: 'problems_to_solve',
-        text: 'Yaşam alanında çözmemizi istediğin bir konu var mı?',
-        type: 'textarea',
-        required: false,
-        layout: 'vertical'
-    }, {
-        id: 'residents',
-        text: 'Evde çocuk ya da evcil hayvan var mı?',
-        type: 'radio',
-        options: ['Sadece çocuk var', 'Sadece evcil hayvan var', 'Her ikisi de var', 'Her ikisi de yok'],
-        required: false,
-        layout: 'vertical'
-    }, {
-        id: 'expectations',
-        text: 'Tasarlanmasını istediğin mekanda en temel beklentin nedir?',
-        type: 'textarea',
-        required: false,
-        layout: 'vertical'
-    }, {
-        id: 'style',
-        text: 'Sence seni en iyi yansıtan dekorasyon tarzı hangisi?',
-        type: 'radio',
-        options: ['Modern', 'Bohem', 'İskandinav', 'Klasik', 'Diğer'],
-        required: false,
-        hasOtherSpecify: true,
-        layout: 'vertical'
-    }, {
-        id: 'colors',
-        text: 'Mekan içerisinde hangi renkleri/tonları ön planda görmek istersin?',
-        type: 'checkbox',
-        options: ['Beyaz ve açık nötr tonlar', 'Gri Tonları', 'Krem/Bej Tonları', 'Toprak Tonları (kahve, kum vs.)', 'Pastel Tonlar(pudra, mint vs.)', 'Canlı Renkler(sarı, turuncu vs.)', 'Koyu Tonlar (siyah, antrasit vs.)', 'Diğer'],
-        required: false,
-        hasOtherSpecify: true,
-        layout: 'vertical'
-    }, {
-        id: 'materials',
-        text: 'Hangi malzeme tarzı sana daha yakın?',
-        type: 'radio',
-        options: ['Doğal Malzemeler (ahşap, taş, keten vs.)', 'Modern Malzeme ( cam, metal, kaplama yüzeyler vs.)', 'İkisinin dengesi olsun isterim'],
-        required: false,
-        layout: 'vertical'
-    }, {
-        id: 'fabric_sensitivity',
-        text: 'Kumaş seçiminde özel bir isteğin ya da hassasiyetin var mı?',
-        type: 'textarea',
-        required: true,
-        layout: 'horizontal'
-    }, {
-        id: 'budget',
-        text: 'Proje için düşündüğün yaklaşık bütçeyi paylaşır mısın?',
-        type: 'checkbox',
-        options: ['70.000 TL - 90.000 TL', '90.000 TL - 110.000 TL', '110.000 TL - 130.000 TL', '130.000 TL - 150.000 TL'],
-        required: false,
-        layout: 'horizontal'
-    }, {
-        id: 'priority',
-        text: 'Mekan içerisinde senin için en öncelikli olan ne?',
-        type: 'radio',
-        options: ['Görsellik', 'İşlevsellik', 'Konfor'],
-        required: false,
-        layout: 'horizontal'
-    }, {
         id: 'notes',
         text: 'İç mimarımıza iletmek istediğin bir notun var mı?',
         type: 'textarea',
         required: true,
         layout: 'horizontal'
-    }, ];
+    }];
     
     const FileUpload = ({ question, value, onChange }) => {
         const handleFileChange = (e) => {
