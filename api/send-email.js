@@ -2,8 +2,9 @@
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 
-// Güvenlik için sadece belirli domainlerden gelen isteklere izin ver.
-const allowedOrigins = ['https://dekorla.co', 'https://admin.shopify.com'];
+// Güvenlik için sadece belirli domainlerden (ve alt domainlerinden) gelen isteklere izin ver.
+// Bu, dekorla.co ve tüm shopify alt alan adlarından gelen isteklere izin verir.
+const allowedOriginPatterns = [/dekorla\.co$/, /shopify\.com$/];
 
 // Multer ayarları: Bellekte saklama ve dosya boyutu limiti (15MB)
 const upload = multer({
@@ -26,19 +27,20 @@ const runMiddleware = (req, res, fn) => {
 
 // Ana sunucusuz fonksiyon (async/await ile)
 module.exports = async (req, res) => {
-  // CORS Başlıklarını Ayarla
+  // --- Gelişmiş CORS Başlıkları ---
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
+  // Origin'in izin verilen desenlerden biriyle eşleşip eşleşmediğini kontrol et
+  if (origin && allowedOriginPatterns.some(pattern => pattern.test(new URL(origin).hostname))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
   }
   
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
 
   // Tarayıcının gönderdiği "preflight" OPTIONS isteğini işle
   if (req.method === 'OPTIONS') {
-    return res.status(204).end(); // 204 No Content, en doğru yanıttır.
+    return res.status(204).end();
   }
   
   // Sadece POST isteklerine izin ver
