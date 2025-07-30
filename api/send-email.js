@@ -1,11 +1,14 @@
 // /api/send-email.js
-
-// Node.js'in standart modül sistemini (CommonJS) kullanıyoruz.
-// Bu, Vercel ortamıyla en yüksek uyumluluğu sağlar.
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 
-const ALLOWED_ORIGIN = 'https://dekorla.co';
+// Güvenlik: İzin verilen kaynakların bir listesi.
+const allowedOrigins = [
+  'https://dekorla.co',
+  // Vercel'in önizleme (preview) ve test ortamları için esnek bir kural ekliyoruz.
+  // Bu, 'tasarim-anketi-git-master-alper-boyers-projects.vercel.app' gibi tüm adresleri kapsar.
+  /https:\/\/[a-z0-9-]+\.vercel\.app$/
+];
 
 // Multer yapılandırması
 const upload = multer({
@@ -31,17 +34,22 @@ function runMiddleware(req, res, fn) {
 module.exports = async (req, res) => {
   const origin = req.headers.origin;
 
-  // ÖNCE: Her zaman CORS başlıklarını ayarla (eğer kaynak uygunsa).
-  // Bu, tarayıcının ilk "preflight" (OPTIONS) isteğine doğru yanıtı garanti eder.
-  if (origin === ALLOWED_ORIGIN) {
+  // Gelen isteğin kaynağının izin verilenler listesinde olup olmadığını kontrol et.
+  const isAllowed = allowedOrigins.some(pattern => {
+    if (pattern instanceof RegExp) {
+      return pattern.test(origin);
+    }
+    return origin === pattern;
+  });
+
+  if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   }
 
-  // Tarayıcının ön kontrol isteğini (preflight) ele al.
-  // Bu, asıl POST isteğinin engellenmesini önleyen en kritik adımdır.
+  // Tarayıcının ön kontrol (preflight) isteğini ele al.
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
@@ -53,10 +61,9 @@ module.exports = async (req, res) => {
     res.status(405).end('Method Not Allowed');
     return;
   }
-  
-  // Güvenlik: Asıl POST isteği için kaynağı tekrar kontrol et.
-  // Bu, OPTIONS kontrolünden sonra ek bir güvenlik katmanıdır.
-  if (origin !== ALLOWED_ORIGIN) {
+
+  // Asıl POST isteği için güvenlik kontrolü.
+  if (!isAllowed) {
     res.status(403).json({ error: 'Forbidden: Invalid origin.' });
     return;
   }
