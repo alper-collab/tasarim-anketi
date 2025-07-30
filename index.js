@@ -233,8 +233,7 @@ window.addEventListener('load', () => {
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     body: formData,
-                    // Sunucunun 'Access-Control-Allow-Credentials' başlığıyla uyumlu çalışması için bu gereklidir.
-                    credentials: 'include',
+                    // CORS TEŞHİSİ İÇİN KALDIRILDI: credentials: 'include',
                 });
                 if (response.ok) {
                     setView('submitted');
@@ -263,7 +262,7 @@ window.addEventListener('load', () => {
         };
         const handlePrev = () => {
             if (currentStep > 0) {
-                setCurrentStep(prev => prev - 1);
+                setCurrentStep(prev => prev + 1);
             }
         };
         const handleStart = () => {

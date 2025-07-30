@@ -51,7 +51,7 @@ Bu, anketimizi temanızın geri kalanından izole eder ve tema güncellemelerind
 ### Adım 2: Gerekli Dosyaları "Assets" Klasörüne Yükleyin
 
 1.  Yine kod düzenleyicide, soldaki menüden **Assets** klasörünü bulun ve açın.
-2.  Eğer mevcutsa, eski `index.css` ve `index.js` dosyalarını silin.
+2.  **ÇOK ÖNEMLİ:** `Assets` klasörünün içinde, eğer mevcutsa, eski **`index.css`** ve **`index.js`** dosyalarını bulun ve üzerlerine tıklayıp **"Delete file"** (Dosyayı sil) butonuna basarak **SİLİN**. Bu adım, önbellek sorunlarını önlemek için kritiktir.
 3.  **"Add a new asset"** (Yeni asset ekle) butonunu kullanın.
 4.  Projenizdeki **`index.css`** ve **`index.js`** dosyalarını bu klasöre yükleyin.
 
