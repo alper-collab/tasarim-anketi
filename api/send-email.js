@@ -2,16 +2,6 @@
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 
-// --- Güvenlik: İzin Verilen Kaynaklar (Origins) ---
-// Sadece bu kaynaklardan gelen isteklere izin verilir.
-const allowedOrigins = [
-  'https://dekorla.co',
-  'https://www.dekorla.co',
-  'https://dekorla.myshopify.com',
-  /https:\/\/tasarim-anketi-.*\.vercel\.app$/, // Vercel önizleme URL'leri için Regex
-  'http://localhost:3000', // Yerel geliştirme ortamı
-];
-
 // Multer yapılandırması (dosya yükleme işlemi için)
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -34,37 +24,26 @@ const runMiddleware = (req, res, fn) => {
 
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
-  const origin = req.headers.origin;
-
-  // 1. Güvenlik Kapısı: İsteğin kaynağını en başta kontrol et.
-  const isAllowed = origin && allowedOrigins.some(pattern =>
-    (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern)
-  );
-
-  if (!isAllowed) {
-    // İzin verilmeyen bir kaynaktan istek gelirse, hatayı logla ve reddet.
-    console.error(`CORS: Reddedilen kaynak: ${origin}`);
-    return res.status(403).json({ error: 'Erişim reddedildi. İzin verilmeyen kaynak.' });
-  }
-
-  // 2. CORS Başlıklarını Ayarla: Kaynak izinli olduğu için başlıkları ekle.
-  // Bu, hem OPTIONS hem de POST istekleri için çalışacaktır.
-  res.setHeader('Access-Control-Allow-Origin', origin);
+  // --- CORS SORUN GİDERME: EN DOĞRUDAN YÖNTEM ---
+  // Gerekli başlıkları, gelen isteğin kaynağını kontrol etmeden, doğrudan ve statik olarak ayarlıyoruz.
+  // Bu, sorunun kod mantığında mı yoksa platformda mı olduğunu anlamak için en güvenilir testtir.
+  res.setHeader('Access-Control-Allow-Origin', 'https://dekorla.co');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
-  // 3. Ön Kontrol (Preflight) İsteğini İşle: Tarayıcının gönderdiği OPTIONS isteğine yanıt ver.
+  // 1. Ön Kontrol (Preflight) İsteğini İşle: Tarayıcının gönderdiği OPTIONS isteğine yanıt ver.
+  // Bu, başlıklar ayarlandıktan hemen sonra yapılmalıdır.
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
-  // 4. Sadece POST Metoduna İzin Ver
+  // 2. Sadece POST Metoduna İzin Ver
   if (req.method !== 'POST') {
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  // 5. Asıl e-posta gönderme mantığı
+  // 3. Asıl e-posta gönderme mantığı
   try {
     // form-data'yı işlemesi için multer middleware'ini çalıştır.
     await runMiddleware(req, res, upload);
