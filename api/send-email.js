@@ -5,11 +5,11 @@ const multer = require('multer');
 // Güvenlik: İzin verilen kaynakların bir listesi.
 const allowedOrigins = [
   'https://dekorla.co',
-  'https://www.dekorla.co', // WWW alt alan adı için eklendi
-  'https://dekorla.myshopify.com', // Varsayılan Shopify alanı için eklendi
-  // Vercel'in önizleme (preview) ve test ortamları için esnek bir kural ekliyoruz.
-  // Bu, 'tasarim-anketi-git-master-alper-boyers-projects.vercel.app' gibi tüm adresleri kapsar.
-  /https:\/\/[a-z0-9-]+\.vercel\.app$/
+  'https://www.dekorla.co',
+  'https://dekorla.myshopify.com',
+  // Vercel'in önizleme (preview) ve test ortamları için esnek bir kural.
+  // Proje adıyla başlayan tüm vercel.app alt alan adlarına izin verir.
+  /https:\/\/tasarim-anketi-.*\.vercel\.app$/
 ];
 
 // Multer yapılandırması
@@ -38,35 +38,41 @@ module.exports = async (req, res) => {
 
   // Gelen isteğin kaynağının izin verilenler listesinde olup olmadığını kontrol et.
   const isAllowed = allowedOrigins.some(pattern => {
-    if (!origin) return false; // Origin başlığı yoksa reddet
+    if (!origin) return false;
     if (pattern instanceof RegExp) {
       return pattern.test(origin);
     }
     return origin === pattern;
   });
 
+  // Gelen origin izin verilenler listesindeyse, ilgili başlığı ayarla.
+  // Bu, tarayıcının çapraz kaynak isteklerini güvenli bir şekilde yapmasını sağlar.
   if (isAllowed) {
     res.setHeader('Access-Control-Allow-Origin', origin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   }
+  
+  // Her zaman gönderilmesi gereken diğer CORS başlıkları.
+  // Tarayıcıya hangi metotların ve başlıkların kullanılabileceğini bildirir.
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
   // Tarayıcının ön kontrol (preflight) isteğini ele al.
+  // Bu, asıl POST isteği gönderilmeden önce tarayıcının sunucudan izin istemesidir.
   if (req.method === 'OPTIONS') {
-    // isAllowed ise yukarıda başlıklar ayarlandı. Değilse, başlıklar olmadan 204 döner ve tarayıcı reddeder.
     res.status(204).end();
     return;
   }
-
-  // Sadece POST isteklerine devam et.
+  
+  // Sadece POST isteklerine devam et, diğerlerini reddet.
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST', 'OPTIONS']);
-    res.status(405).end('Method Not Allowed');
+    res.status(405).end(`Method ${req.method} Not Allowed`);
     return;
   }
 
-  // Asıl POST isteği için güvenlik kontrolü.
+  // Güvenlik: Asıl POST isteği için origin kontrolü.
+  // Eğer origin izin verilenler arasında değilse, isteği reddet.
   if (!isAllowed) {
     res.status(403).json({ error: `Forbidden: Origin '${origin}' is not allowed.` });
     return;
