@@ -22,52 +22,44 @@ const runMiddleware = (req, res, fn) => {
   });
 };
 
-// CORS ayarlarını yöneten ve ana fonksiyonu sarmalayan bir "wrapper" fonksiyonu.
-// Bu, CORS mantığını iş mantığından ayırarak kodu daha temiz ve yönetilebilir hale getirir.
-const allowCors = (fn) => async (req, res) => {
-  // İzin verilen kaynakların listesi. Tarayıcıdan gelen 'Origin' başlığı bu listedekilerden
-  // biriyle eşleşmelidir.
+// Ana API işleyici fonksiyonu
+module.exports = async (req, res) => {
+  // --- KESİN CORS ÇÖZÜMÜ ---
+  // Karmaşık mantık yerine, her şeyin başında CORS başlıklarını doğrudan ayarlıyoruz.
+  // Bu, Vercel'in preflight (OPTIONS) isteklerini doğru işlemesini garanti eder.
+
   const allowedOrigins = [
     'https://dekorla.co',
     'https://www.dekorla.co',
     'https://dekorla.myshopify.com',
-    // Vercel'in önizleme (preview) ve geliştirme ortamları için esnek bir kural.
+    // Geliştirme ve önizleme ortamları için esnek kurallar
     /https:\/\/tasarim-anketi-.*\.vercel\.app$/,
+    'http://localhost:3000', // Yerel geliştirme için
   ];
 
   const origin = req.headers.origin;
-  const isAllowed = origin && allowedOrigins.some(pattern => {
-    if (pattern instanceof RegExp) {
-      return pattern.test(origin);
-    }
-    return origin === pattern;
-  });
-
-  // Eğer istek yapan kaynak izin verilenler listesindeyse, o kaynağa özel olarak izin verilir.
-  // Bu, 'credentials: "include"' ile yapılan istekler için bir güvenlik gerekliliğidir.
-  if (isAllowed) {
+  
+  // İzin verilenler listesindeki bir kaynaktan geliyorsa, o kaynağı başlığa ekle.
+  if (origin && allowedOrigins.some(pattern => (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    // Köken belirtilmemişse (örneğin, sunucudan sunucuya istek), belirli bir varsayılan değere izin verilebilir.
+    // Şimdilik en yaygın olanı ekliyoruz.
+    res.setHeader('Access-Control-Allow-Origin', 'https://dekorla.co');
   }
 
-  // Tarayıcıya hangi metotların, başlıkların ve kimlik bilgisi kullanımının serbest olduğunu bildiren başlıklar.
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-  // Tarayıcı, asıl POST isteğini göndermeden önce bir 'OPTIONS' isteği (preflight request) gönderir.
-  // Bu isteğe 204 (No Content) koduyla yanıt vererek sunucunun CORS'a hazır olduğunu bildiririz.
+  // Tarayıcının preflight isteğine anında yanıt ver ve işlemi sonlandır.
   if (req.method === 'OPTIONS') {
     res.status(204).end();
     return;
   }
-  
-  // Asıl iş mantığını (e-posta gönderme) çalıştır.
-  return await fn(req, res);
-};
+  // --- CORS ÇÖZÜMÜ SONU ---
 
-// E-postayı gönderen asıl iş mantığı
-const handler = async (req, res) => {
-  // Güvenlik: Sadece POST metoduyla gelen istekleri kabul et.
+  // Sadece POST metoduyla gelen istekleri kabul et.
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST', 'OPTIONS']);
     res.status(405).end(`Method ${req.method} Not Allowed`);
@@ -75,14 +67,14 @@ const handler = async (req, res) => {
   }
 
   try {
-    // form-data'yı (dosyalar ve metin verileri) işlemesi için multer middleware'ini çalıştır.
+    // form-data'yı işlemesi için multer middleware'ini çalıştır.
     await runMiddleware(req, res, upload);
 
     // İstek gövdesinden anket verilerini ve dosyaları al.
     const submissionData = JSON.parse(req.body.submission);
     const files = req.files;
 
-    // Ortam değişkenlerini kullanarak e-posta göndericisini (transporter) güvenli bir şekilde ayarla.
+    // Ortam değişkenlerini kullanarak e-posta göndericisini güvenli bir şekilde ayarla.
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
       port: parseInt(process.env.SMTP_PORT, 10),
@@ -91,6 +83,9 @@ const handler = async (req, res) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // Hataları daha iyi ayıklamak için debug ve logger seçenekleri
+      debug: true, 
+      logger: true 
     });
 
     // E-posta gövdesini (HTML formatında) oluştur.
@@ -99,7 +94,7 @@ const handler = async (req, res) => {
       emailBody += `<p><b>${question}:</b></p><p>${String(answer).replace(/\n/g, '<br>')}</p><hr>`;
     }
 
-    // E-posta seçeneklerini (gönderen, alıcı, konu, ekler vb.) ayarla.
+    // E-posta seçeneklerini ayarla.
     const mailOptions = {
       from: `"Dekorla Anket" <${process.env.SMTP_SENDER_EMAIL}>`,
       to: process.env.SMTP_RECIPIENT_EMAIL,
@@ -128,10 +123,6 @@ const handler = async (req, res) => {
     }
     
     // Diğer tüm beklenmedik hatalar için genel bir sunucu hatası mesajı dön.
-    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu.' });
+    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu. Lütfen teknik ekiple iletişime geçin.' });
   }
 };
-
-// Ana işleyiciyi (handler) CORS sarmalayıcısıyla (allowCors) dışa aktar.
-// Bu sayede her istek önce CORS kontrolünden geçer.
-module.exports = allowCors(handler);
