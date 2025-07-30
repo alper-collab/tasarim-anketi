@@ -345,6 +345,8 @@ window.addEventListener('load', () => {
                 const response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     body: formData,
+                    // Sunucunun 'Access-Control-Allow-Credentials' başlığıyla uyumlu çalışması için bu gereklidir.
+                    credentials: 'include',
                 });
                 if (response.ok) {
                     setView('submitted');
