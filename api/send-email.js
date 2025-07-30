@@ -24,16 +24,13 @@ const runMiddleware = (req, res, fn) => {
 
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
-  // --- CORS SORUN GİDERME: EN DOĞRUDAN YÖNTEM ---
-  // Gerekli başlıkları, gelen isteğin kaynağını kontrol etmeden, doğrudan ve statik olarak ayarlıyoruz.
-  // Bu, sorunun kod mantığında mı yoksa platformda mı olduğunu anlamak için en güvenilir testtir.
-  res.setHeader('Access-Control-Allow-Origin', 'https://dekorla.co');
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  // --- CORS SORUN GİDERME: NÜKLEER SEÇENEK (Geçici ve Teşhis Amaçlı) ---
+  // Tüm kaynaklardan gelen isteklere izin veriyoruz. '*' kullandığımızda credentials true olamaz.
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
 
   // 1. Ön Kontrol (Preflight) İsteğini İşle: Tarayıcının gönderdiği OPTIONS isteğine yanıt ver.
-  // Bu, başlıklar ayarlandıktan hemen sonra yapılmalıdır.
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
