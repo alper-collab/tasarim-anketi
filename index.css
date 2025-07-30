@@ -1,0 +1,560 @@
+/* Sayfa başlığını gizler. Bu, temanızın varsayılan sayfa başlığını hedefler. */
+body main h1:first-of-type {
+  display: none;
+}
+
+/* 
+  Bu dosya, anketin tüm stillerini içerir ve Shopify temasıyla
+  çakışmaları önlemek için çoğu kural '#root' 
+  kapsayıcısı içine alınmıştır.
+*/
+
+#root {
+  /* CSS Değişkenleri burada, doğru yerde tanımlanmıştır. */
+  --primary-color: #1f2937; /* tailwind gray-800 */
+  --primary-color-hover: #374151; /* tailwind gray-700 */
+  --accent-color: #3b82f6; /* tailwind blue-500 for buttons */
+  --accent-color-hover: #2563eb; /* tailwind blue-600 */
+  --border-color: #d1d5db; /* tailwind gray-300 */
+  --border-color-light: #e5e7eb; /* tailwind gray-200 */
+  --page-bg: #f3f4f6; /* Modern, light gray background from reference */
+  --question-bg: #FAF7C4; /* Requested warm yellow for footer area */
+  --card-background: #ffffff;
+  --text-color: #111827; /* tailwind gray-900 */
+  --text-light: #4b5563; /* tailwind gray-600 */
+  --disabled-bg-color: #e5e7eb; /* tailwind gray-200 for disabled bg */
+  --disabled-text-color: #9ca3af; /* tailwind gray-400 for disabled text */
+  --error-color: #ef4444; /* tailwind red-500 */
+  --font-family: 'Instrument Sans', sans-serif;
+
+  /* Temel Stiller */
+  font-family: var(--font-family);
+  color: var(--text-color);
+  width: 100%;
+  background-color: var(--page-bg);
+  padding: 3rem 1rem; /* Kartın etrafında boşluk bırakır */
+  min-height: 100vh;
+}
+
+#root * {
+  box-sizing: border-box;
+}
+
+/* Anket artık tam ekran yerine merkezlenmiş bir karttır */
+#root .survey-container {
+  background-color: var(--card-background);
+  border-radius: 1rem; /* Daha yumuşak, modern köşeler */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.07); /* Hoş, zarif bir gölge */
+  border: 1px solid var(--border-color-light);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-width: 720px; /* Reference width is narrower */
+  margin: 0 auto; /* Sayfada ortalar */
+}
+
+
+#root .progress-container {
+  padding: 1.5rem 2.5rem 0;
+  background-color: var(--card-background);
+}
+
+#root .progress-info {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+  font-size: 1rem; /* Büyütüldü */
+  font-weight: 500;
+  color: var(--text-light);
+}
+
+#root .progress-bar {
+  background-color: var(--border-color-light);
+  border-radius: 99px;
+  height: 0.5rem;
+  width: 100%;
+  overflow: hidden;
+}
+
+#root .progress-bar-fill {
+  background-color: var(--primary-color);
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+/* Question Body now has white background */
+#root .question-body {
+  padding: 2.5rem 4rem 3.5rem; /* Daha ferah bir dolgu */
+  min-height: 320px;
+  display: flex;
+  align-items: center;
+  background-color: var(--card-background);
+}
+
+/* Soru Yerleşimleri */
+#root .question-layout-vertical {
+  width: 100%;
+}
+#root .question-layout-horizontal {
+  width: 100%;
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+#root .question-text {
+  font-size: 1.5rem; /* Larger question text */
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+#root .question-layout-vertical .question-text {
+  margin-bottom: 1.5rem;
+}
+#root .question-layout-horizontal .question-text {
+  flex: 1;
+  min-width: 200px;
+}
+#root .question-content {
+  flex: 2;
+}
+
+#root .required-star {
+  color: var(--error-color);
+  margin-left: 0.25rem;
+  font-weight: 700;
+}
+
+/* Form Elemanları */
+#root .text-input {
+  width: 100%;
+  padding: 0.875rem 1.125rem;
+  border: 1px solid var(--border-color);
+  border-radius: 0.5rem;
+  font-size: 1.125rem; /* Büyütüldü */
+  font-family: var(--font-family);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: #fff;
+}
+
+#root .text-input::placeholder {
+  color: #9ca3af; /* tailwind gray-400 */
+  opacity: 1; /* Firefox'ta opaklık sorununu düzeltir */
+}
+
+#root .text-input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(31, 41, 55, 0.1);
+}
+#root textarea.text-input {
+  min-height: 140px;
+  resize: vertical;
+}
+#root .other-specify-input {
+  margin-top: 1rem;
+}
+
+/* Özel Radio & Checkbox */
+#root .options-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+#root .options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+#root .choice-label {
+  display: flex;
+  align-items: center;
+  padding: 0.875rem 1rem;
+  background-color: #f9fafb; /* Lighter background for choices */
+  border: 1px solid var(--border-color-light);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+#root .choice-label:hover {
+  background-color: #f3f4f6;
+  border-color: var(--border-color);
+}
+#root .choice-label input {
+  display: none;
+}
+#root .choice-label .custom-control {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--text-light);
+  margin-right: 1rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0;
+  transition: border-color 0.2s, background-color 0.2s;
+  position: relative;
+}
+#root .choice-label .custom-radio { border-radius: 50%; }
+#root .choice-label .custom-checkbox { border-radius: 0.375rem; }
+
+#root .choice-label input:checked + .custom-control {
+  background-color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+#root .choice-label input:checked + .custom-control::after {
+  content: '';
+  display: block;
+}
+#root .choice-label .custom-radio input:checked + .custom-control::after {
+  width: 10px;
+  height: 10px;
+  background-color: white;
+  border-radius: 50%;
+}
+#root .choice-label .custom-checkbox input:checked + .custom-control::after {
+    width: 6px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 3px 3px 0;
+    transform: rotate(45deg);
+}
+
+#root .choice-text {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+/* Dosya Yükleme - Yeni Tasarım */
+#root .file-upload-wrapper {
+  width: 100%;
+}
+
+#root .file-upload-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border: 2px dashed var(--border-color);
+  border-radius: 0.75rem;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+  text-align: center;
+  background-color: #fafafa;
+}
+
+#root .file-upload-container:hover {
+  border-color: var(--accent-color);
+  background-color: #f5f8ff;
+}
+
+#root .file-upload-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+#root .file-upload-content .upload-icon {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+#root .file-upload-texts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+}
+
+#root .file-upload-content .upload-text {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text-color);
+}
+
+#root .file-upload-content .upload-hint {
+  font-size: 0.875rem;
+  color: var(--text-light);
+}
+
+#root .file-upload-button {
+  margin-left: auto;
+  background-color: var(--accent-color);
+  color: white;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  transition: background-color 0.2s;
+}
+
+#root .file-upload-container:hover .file-upload-button {
+  background-color: var(--accent-color-hover);
+}
+
+#root .file-input-hidden {
+  display: none;
+}
+
+#root .file-preview-list {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#root .file-preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.75rem;
+  background-color: #f3f4f6;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+}
+
+#root .file-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 1rem;
+}
+#root .remove-file-btn {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-light);
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+#root .remove-file-btn:hover {
+  color: var(--error-color);
+}
+
+/* Navigasyon - Yeni Tasarım */
+#root .navigation-buttons {
+  padding: 1rem 2.5rem;
+  background-color: var(--question-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+#root .nav-button-container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#root .submit-error {
+    color: var(--error-color);
+    font-weight: 500;
+    text-align: center;
+}
+
+#root .nav-button {
+  background-color: transparent;
+  border: none;
+  color: var(--text-light);
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: var(--font-family);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+#root .nav-button:hover:not(:disabled) {
+  color: var(--primary-color);
+}
+
+#root .nav-button.nav-prev::before {
+  content: '←';
+  margin-right: 0.6em;
+  font-size: 1.2em;
+}
+
+#root .nav-button.nav-next::after {
+  content: '→';
+  margin-left: 0.6em;
+  font-size: 1.2em;
+}
+
+#root .nav-button:disabled {
+  color: var(--disabled-text-color);
+  cursor: not-allowed;
+}
+
+#root .nav-button.hidden {
+  visibility: hidden;
+}
+
+/* Teşekkür Ekranı */
+#root .thank-you-container {
+  padding: 4rem 2rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-height: 500px;
+}
+#root .thank-you-container h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+#root .thank-you-container p {
+  font-size: 1.125rem;
+  color: var(--text-light);
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* Karşılama Ekranı */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#root .survey-container.welcome-view {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    z-index: 9999;
+    /* Kart stillerini sıfırla */
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+}
+  
+#root .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+}
+
+#root .welcome-content {
+    background-color: var(--question-bg);
+    padding: 4rem 2rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    min-height: 450px;
+}
+
+#root .welcome-title {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+#root .welcome-subtitle {
+  font-size: 1.25rem; /* Boyut artırıldı (yaklaşık 20px) */
+  color: var(--text-light);
+  max-width: 600px;
+  line-height: 1.6;
+  margin-bottom: 2.5rem;
+  text-align: center;
+}
+
+#root .start-button {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 1rem 3rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-family: var(--font-family);
+  border-radius: 99px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  transform: scale(1);
+}
+
+#root .start-button:hover {
+  background-color: var(--primary-color-hover);
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+
+@media (max-width: 768px) {
+  #root {
+    padding: 1rem 0;
+  }
+  #root .survey-container {
+    max-width: calc(100% - 2rem);
+  }
+  #root .question-layout-horizontal {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  #root .question-layout-horizontal .question-text {
+    flex: none;
+    width: 100%;
+  }
+  #root .question-body {
+    padding: 2.5rem 1.5rem;
+  }
+  #root .navigation-buttons {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  #root .options-grid {
+    grid-template-columns: 1fr;
+  }
+  #root .welcome-title {
+    font-size: 2.25rem;
+  }
+}
+
+@media (max-width: 600px) {
+  #root {
+    padding: 0; /* Mobil için kenardan kenara deneyim */
+  }
+
+  #root .survey-container:not(.welcome-view) {
+    min-height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+    border: none;
+    max-width: 100%;
+  }
+  
+  #root .progress-container { padding: 1rem 1.5rem 0; }
+  #root .question-body { padding: 2rem 1.5rem; min-height: auto; }
+  #root .navigation-buttons { padding: 1rem 1.5rem; }
+  #root .question-text { font-size: 1.25rem; }
+
+  #root .file-upload-content {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+  #root .file-upload-texts {
+    align-items: center;
+    text-align: center;
+  }
+  #root .file-upload-button {
+    margin-left: 0;
+  }
+}
