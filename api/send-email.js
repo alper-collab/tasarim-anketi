@@ -35,30 +35,36 @@ const runMiddleware = (req, res, fn) => {
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
   const origin = req.headers.origin;
-  
-  // 1. Gelen isteğin kaynağını kontrol et ve dinamik olarak CORS başlıklarını ayarla
-  if (origin && allowedOrigins.some(pattern => (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern))) {
-    res.setHeader('Access-Control-Allow-Origin', origin); // '*' yerine spesifik origin
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-  } else if (origin) {
-    // Eğer kaynak izin verilenler listesinde yoksa, erişimi reddet
-    return res.status(403).json({ error: `Erişim reddedildi. İzin verilmeyen kaynak: ${origin}` });
+
+  // 1. Güvenlik Kapısı: İsteğin kaynağını en başta kontrol et.
+  const isAllowed = origin && allowedOrigins.some(pattern =>
+    (pattern instanceof RegExp ? pattern.test(origin) : origin === pattern)
+  );
+
+  if (!isAllowed) {
+    // İzin verilmeyen bir kaynaktan istek gelirse, hatayı logla ve reddet.
+    console.error(`CORS: Reddedilen kaynak: ${origin}`);
+    return res.status(403).json({ error: 'Erişim reddedildi. İzin verilmeyen kaynak.' });
   }
 
-  // 2. Tarayıcının 'preflight' (ön kontrol) isteğini anında işle
-  // Bu, tarayıcının asıl POST isteğini göndermeden önce izinleri kontrol etmek için gönderdiği bir OPTIONS isteğidir.
+  // 2. CORS Başlıklarını Ayarla: Kaynak izinli olduğu için başlıkları ekle.
+  // Bu, hem OPTIONS hem de POST istekleri için çalışacaktır.
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+
+  // 3. Ön Kontrol (Preflight) İsteğini İşle: Tarayıcının gönderdiği OPTIONS isteğine yanıt ver.
   if (req.method === 'OPTIONS') {
-    return res.status(204).end(); // 204 No Content ile yanıtla ve işlemi bitir.
+    return res.status(204).end();
   }
 
-  // 3. Sadece POST isteklerine izin ver (OPTIONS zaten işlendi)
+  // 4. Sadece POST Metoduna İzin Ver
   if (req.method !== 'POST') {
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  // 4. Asıl e-posta gönderme mantığı
+  // 5. Asıl e-posta gönderme mantığı
   try {
     // form-data'yı işlemesi için multer middleware'ini çalıştır.
     await runMiddleware(req, res, upload);
