@@ -1,16 +1,29 @@
 // /api/send-email.js
 const nodemailer = require('nodemailer');
-const multer = require('multer');
+const cors = require('cors');
 
-// Multer yapılandırması (dosya yükleme işlemi için)
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 15 * 1024 * 1024, // Her dosya için 15 MB limit
+// İzin verilen kaynakların (origin) güvenli listesi
+const allowedOrigins = [
+  'https://dekorla.co',
+  'https://dekorla.myshopify.com'
+];
+
+// CORS ayarları: Sadece beyaz listedeki kaynaklara izin ver ve credentials'ı destekle.
+const corsMiddleware = cors({
+  origin: function (origin, callback) {
+    // Tarayıcı dışı istekler (server-to-server) veya mobil uygulamalar için `origin` başlığı olmayabilir.
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bu kaynağın CORS politikası tarafından erişimine izin verilmiyor.'));
+    }
   },
-}).any(); // Birden fazla ve farklı isimlerdeki dosya alanlarını kabul eder
+  methods: ['POST', 'OPTIONS'], // Tarayıcının preflight isteği için OPTIONS metoduna izin ver.
+  allowedHeaders: ['Content-Type'], // JSON gönderimi için Content-Type başlığına izin ver.
+  credentials: true,
+});
 
-// Middleware'i Promise tabanlı hale getiren yardımcı fonksiyon
+// Vercel'de middleware çalıştırmak için yardımcı fonksiyon
 const runMiddleware = (req, res, fn) => {
   return new Promise((resolve, reject) => {
     fn(req, res, (result) => {
@@ -24,77 +37,64 @@ const runMiddleware = (req, res, fn) => {
 
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
-  // --- CORS SORUN GİDERME: NÜKLEER SEÇENEK (Geçici ve Teşhis Amaçlı) ---
-  // Tüm kaynaklardan gelen isteklere izin veriyoruz. '*' kullandığımızda credentials true olamaz.
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-
-  // 1. Ön Kontrol (Preflight) İsteğini İşle: Tarayıcının gönderdiği OPTIONS isteğine yanıt ver.
-  if (req.method === 'OPTIONS') {
-    return res.status(204).end();
-  }
-
-  // 2. Sadece POST Metoduna İzin Ver
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-  }
-
-  // 3. Asıl e-posta gönderme mantığı
   try {
-    // form-data'yı işlemesi için multer middleware'ini çalıştır.
-    await runMiddleware(req, res, upload);
+    // 1. CORS MİDDLEWARE'İNİ ÇALIŞTIR
+    // Bu, tarayıcıdan gelen preflight (OPTIONS) isteklerini otomatik olarak yönetir
+    // ve doğru CORS başlıklarıyla yanıt verir.
+    await runMiddleware(req, res, corsMiddleware);
 
-    // İstek gövdesinden anket verilerini ve dosyaları al.
-    const submissionData = JSON.parse(req.body.submission);
-    const files = req.files;
+    // 2. İSTEK METODUNU KONTROL ET
+    // `cors` middleware'i OPTIONS isteğini zaten halletti. Sadece POST ile devam etmeliyiz.
+    if (req.method === 'POST') {
+      // 3. ASIL E-POSTA GÖNDERME MANTIĞI
+      const submissionData = req.body;
+      
+      if (!submissionData || !submissionData.answers || !submissionData.subject) {
+        return res.status(400).json({ error: 'Eksik veya hatalı veri gönderildi.' });
+      }
 
-    // Ortam değişkenlerini kullanarak e-posta göndericisini güvenli bir şekilde ayarla.
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT, 10),
-      secure: process.env.SMTP_PORT === '465', // port 465 ise SSL/TLS kullan
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST,
+        port: parseInt(process.env.SMTP_PORT, 10),
+        secure: process.env.SMTP_PORT === '465',
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
 
-    // E-posta gövdesini (HTML formatında) oluştur.
-    let emailBody = '<h1>Yeni Tasarım Keşif Anketi Sonucu</h1>';
-    for (const [question, answer] of Object.entries(submissionData.answers)) {
-      emailBody += `<p><b>${question}:</b></p><p>${String(answer).replace(/\n/g, '<br>')}</p><hr>`;
+      let emailBody = '<h1>Yeni Tasarım Keşif Anketi Sonucu</h1>';
+      for (const [question, answer] of Object.entries(submissionData.answers)) {
+        emailBody += `<p><b>${question}:</b></p><p>${String(answer).replace(/\n/g, '<br>')}</p><hr>`;
+      }
+
+      const mailOptions = {
+        from: `"Dekorla Anket" <${process.env.SMTP_SENDER_EMAIL}>`,
+        to: process.env.SMTP_RECIPIENT_EMAIL,
+        subject: submissionData.subject,
+        replyTo: submissionData.replyTo,
+        html: emailBody,
+      };
+
+      await transporter.sendMail(mailOptions);
+      
+      return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
+
+    } else if (req.method !== 'OPTIONS') {
+      // Eğer metod POST değilse (ve OPTIONS da değilse, çünkü o cors tarafından halledildi),
+      // o zaman izin verilmeyen bir metoddur.
+      res.setHeader('Allow', ['POST', 'OPTIONS']);
+      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
-
-    // E-posta seçeneklerini ayarla.
-    const mailOptions = {
-      from: `"Dekorla Anket" <${process.env.SMTP_SENDER_EMAIL}>`,
-      to: process.env.SMTP_RECIPIENT_EMAIL,
-      subject: submissionData.subject,
-      replyTo: submissionData.replyTo,
-      html: emailBody,
-      attachments: files.map((file) => ({
-        filename: file.originalname,
-        content: file.buffer,
-        contentType: file.mimetype,
-      })),
-    };
-
-    // E-postayı gönder.
-    await transporter.sendMail(mailOptions);
-    
-    // Başarılı olursa istemciye olumlu yanıt dön.
-    return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
+    // OPTIONS istekleri için `cors` middleware'i yanıtı zaten gönderdiği için
+    // burada ek bir işlem yapmaya gerek yoktur. Fonksiyon sonlanacaktır.
 
   } catch (error) {
     console.error('API Hatası:', error);
-
-    // Hatanın türüne göre istemciye anlamlı bir hata mesajı dön.
-    if (error instanceof multer.MulterError) {
-      return res.status(400).json({ error: `Dosya yükleme hatası: ${error.message}.` });
+    // Middleware'den gelen CORS hatasını yakala
+    if (error.message.includes('CORS')) {
+        return res.status(403).json({ error: 'Erişim engellendi: Geçersiz kaynak.' });
     }
-    
-    // Diğer tüm beklenmedik hatalar için genel bir sunucu hatası mesajı dön.
-    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu. Lütfen teknik ekiple iletişime geçin.' });
+    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu.' });
   }
 };
