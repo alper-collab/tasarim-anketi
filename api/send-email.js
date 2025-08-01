@@ -1,38 +1,22 @@
+
 // /api/send-email.js
 const nodemailer = require('nodemailer');
 
-// İzin verilen kaynakların (origin) güvenli listesi
-const allowedOrigins = [
-  'https://dekorla.co',
-  'https://dekorla.myshopify.com',
-];
+// Not: CORS yönetimi artık proje seviyesinde vercel.json dosyasından yapılıyor.
+// Bu, Vercel üzerindeki en güvenilir yöntemdir ve fonksiyon kodunu temiz tutar.
 
-// Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
-  // --- CORS Başlıklarını Elle Ayarlama (En Güvenilir Yöntem) ---
-  const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
+  if (req.method === 'OPTIONS') {
+    // vercel.json tarafından yönetilen preflight isteği için sadece başarılı yanıt dön.
+    return res.status(200).end();
   }
   
-  res.setHeader('Access-Control-Allow-Credentials', true);
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  // Tarayıcıdan gelen preflight (OPTIONS) isteğini işle
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
-    
-  // Sadece POST metoduna izin ver
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST', 'OPTIONS']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
-    return;
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
-  // --- POST isteği için e-posta gönderme mantığı ---
+  // Buradan sonrası sadece POST istekleri için çalışır.
   try {
     const submissionData = req.body;
       
@@ -69,6 +53,6 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('API Hatası:', error);
-    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu.' });
+    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu: ' + error.message });
   }
 };
