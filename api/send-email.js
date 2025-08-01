@@ -1,7 +1,5 @@
-
 // /api/send-email.js
 const nodemailer = require('nodemailer');
-const Cors = require('cors');
 
 // İzin verilen kaynakların (origin) güvenli listesi
 const allowedOrigins = [
@@ -9,54 +7,33 @@ const allowedOrigins = [
   'https://dekorla.myshopify.com',
 ];
 
-// CORS middleware'ini yapılandır
-const cors = Cors({
-  origin: (origin, callback) => {
-    // Geliştirme ortamında veya mobil testlerde origin boş olabilir.
-    // origin yoksa (sunucu içi istekler, Postman, vb.) veya izin verilenler listesindeyse devam et.
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Bu kaynağın CORS politikası tarafından erişimine izin verilmiyor.'));
-    }
-  },
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
-  credentials: true,
-});
-
-// Middleware'i bir Promise'e dönüştüren yardımcı fonksiyon
-function runMiddleware(req, res, fn) {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-}
-
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
-  try {
-    // 1. CORS middleware'ini her istek için çalıştır
-    await runMiddleware(req, res, cors);
+  // --- CORS Başlıklarını Elle Ayarlama (En Güvenilir Yöntem) ---
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // 2. Tarayıcıdan gelen preflight (OPTIONS) isteğini açıkça işle
-    if (req.method === 'OPTIONS') {
-      res.status(204).end();
-      return;
-    }
+  // Tarayıcıdan gelen preflight (OPTIONS) isteğini işle
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
     
-    // 3. Sadece POST metoduna izin ver
-    if (req.method !== 'POST') {
-      res.setHeader('Allow', ['POST', 'OPTIONS']);
-      res.status(405).end(`Method ${req.method} Not Allowed`);
-      return;
-    }
+  // Sadece POST metoduna izin ver
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST', 'OPTIONS']);
+    res.status(405).end(`Method ${req.method} Not Allowed`);
+    return;
+  }
 
-    // 4. POST isteği için e-posta gönderme mantığı
+  // --- POST isteği için e-posta gönderme mantığı ---
+  try {
     const submissionData = req.body;
       
     if (!submissionData || !submissionData.answers || !submissionData.subject) {
@@ -92,9 +69,6 @@ module.exports = async (req, res) => {
 
   } catch (error) {
     console.error('API Hatası:', error);
-    if (error.message.includes('CORS')) {
-      return res.status(403).json({ error: 'Erişim engellendi: Kaynağa izin verilmiyor.' });
-    }
     return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu.' });
   }
 };
