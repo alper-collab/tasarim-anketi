@@ -1,6 +1,6 @@
 // /api/send-email.js
 const nodemailer = require('nodemailer');
-const cors = require('cors');
+const Cors = require('cors');
 
 // İzin verilen kaynakların (origin) güvenli listesi
 const allowedOrigins = [
@@ -8,51 +8,38 @@ const allowedOrigins = [
   'https://dekorla.myshopify.com'
 ];
 
-// CORS ayarları: Sadece beyaz listedeki kaynaklara izin ver ve credentials'ı destekle.
-const corsMiddleware = cors({
-  origin: function (origin, callback) {
-    // Tarayıcı dışı istekler (server-to-server) veya mobil uygulamalar için `origin` başlığı olmayabilir.
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+// CORS middleware'ini yapılandır
+const cors = Cors({
+  origin: (origin, callback) => {
+    // Köken (origin) yoksa (sunucu içi istekler gibi) veya izin verilenler listesindeyse, devam et.
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      // İzin verilmeyen bir kökense hata fırlat.
       callback(new Error('Bu kaynağın CORS politikası tarafından erişimine izin verilmiyor.'));
     }
   },
-  methods: ['POST', 'OPTIONS'], // Tarayıcının preflight isteği için OPTIONS metoduna izin ver.
-  allowedHeaders: ['Content-Type'], // JSON gönderimi için Content-Type başlığına izin ver.
+  methods: ['POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type'],
   credentials: true,
 });
-
-// Vercel'de middleware çalıştırmak için yardımcı fonksiyon
-const runMiddleware = (req, res, fn) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
 
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
   try {
-    // 1. CORS MİDDLEWARE'İNİ ÇALIŞTIR.
-    // Bu, gelen isteğin kaynağını kontrol eder ve doğru CORS başlıklarını `res` nesnesine ekler.
-    await runMiddleware(req, res, corsMiddleware);
+    // 1. CORS middleware'ini çalıştır.
+    // Bu, gelen isteği bir Promise yapısı içinde sarmalayarak async/await ile uyumlu hale getirir.
+    await new Promise((resolve, reject) => {
+      cors(req, res, (result) => {
+        if (result instanceof Error) {
+          return reject(result);
+        }
+        return resolve(result);
+      });
+    });
 
-    // 2. PREFLIGHT (OPTIONS) İSTEĞİNİ AÇIKÇA ELE AL.
-    // `cors` middleware'i başlıkları ayarladıktan sonra, preflight isteği için
-    // başarılı bir yanıt (204 No Content) gönderip işlemi sonlandırmalıyız.
-    // Bu, tarayıcının sonraki POST isteğini göndermesine izin verir.
-    if (req.method === 'OPTIONS') {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    // 3. SADECE POST İSTEKLERİNE DEVAM ET.
+    // 2. Middleware çalıştıktan sonra, eğer istek bir OPTIONS isteğiyse,
+    // `cors` kütüphanesi yanıtı zaten göndermiş olmalıdır. Bu yüzden sadece POST metodunu ele almamız yeterli.
     if (req.method === 'POST') {
       const submissionData = req.body;
       
@@ -87,11 +74,12 @@ module.exports = async (req, res) => {
       
       return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
 
-    } else {
-      // POST ve OPTIONS dışındaki tüm metodları reddet.
+    } else if (req.method !== 'OPTIONS') {
+      // `cors` middleware'i OPTIONS'ı zaten ele aldı. Diğer tüm metodları reddet.
       res.setHeader('Allow', ['POST', 'OPTIONS']);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
+    // OPTIONS isteği için, `cors` middleware'i yanıtı sonlandırdığı için burada ek bir işlem yapmaya gerek yok.
 
   } catch (error) {
     console.error('API Hatası:', error);
