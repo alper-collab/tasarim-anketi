@@ -38,15 +38,22 @@ const runMiddleware = (req, res, fn) => {
 // Ana API işleyici fonksiyonu
 module.exports = async (req, res) => {
   try {
-    // 1. CORS MİDDLEWARE'İNİ ÇALIŞTIR
-    // Bu, tarayıcıdan gelen preflight (OPTIONS) isteklerini otomatik olarak yönetir
-    // ve doğru CORS başlıklarıyla yanıt verir.
+    // 1. CORS MİDDLEWARE'İNİ ÇALIŞTIR.
+    // Bu, gelen isteğin kaynağını kontrol eder ve doğru CORS başlıklarını `res` nesnesine ekler.
     await runMiddleware(req, res, corsMiddleware);
 
-    // 2. İSTEK METODUNU KONTROL ET
-    // `cors` middleware'i OPTIONS isteğini zaten halletti. Sadece POST ile devam etmeliyiz.
+    // 2. PREFLIGHT (OPTIONS) İSTEĞİNİ AÇIKÇA ELE AL.
+    // `cors` middleware'i başlıkları ayarladıktan sonra, preflight isteği için
+    // başarılı bir yanıt (204 No Content) gönderip işlemi sonlandırmalıyız.
+    // Bu, tarayıcının sonraki POST isteğini göndermesine izin verir.
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
+    // 3. SADECE POST İSTEKLERİNE DEVAM ET.
     if (req.method === 'POST') {
-      // 3. ASIL E-POSTA GÖNDERME MANTIĞI
       const submissionData = req.body;
       
       if (!submissionData || !submissionData.answers || !submissionData.subject) {
@@ -80,18 +87,14 @@ module.exports = async (req, res) => {
       
       return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
 
-    } else if (req.method !== 'OPTIONS') {
-      // Eğer metod POST değilse (ve OPTIONS da değilse, çünkü o cors tarafından halledildi),
-      // o zaman izin verilmeyen bir metoddur.
+    } else {
+      // POST ve OPTIONS dışındaki tüm metodları reddet.
       res.setHeader('Allow', ['POST', 'OPTIONS']);
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
-    // OPTIONS istekleri için `cors` middleware'i yanıtı zaten gönderdiği için
-    // burada ek bir işlem yapmaya gerek yoktur. Fonksiyon sonlanacaktır.
 
   } catch (error) {
     console.error('API Hatası:', error);
-    // Middleware'den gelen CORS hatasını yakala
     if (error.message.includes('CORS')) {
         return res.status(403).json({ error: 'Erişim engellendi: Geçersiz kaynak.' });
     }
