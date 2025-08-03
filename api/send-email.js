@@ -1,42 +1,36 @@
-
 // /api/send-email.js
 const nodemailer = require('nodemailer');
 
-// CORS izinlerini yönetmek için bir "middleware" fonksiyonu.
-// Bu, gelen her isteğin başında çalışarak doğru başlıkları ayarlar.
-const allowCors = (fn) => async (req, res) => {
+// Vercel API rotaları için standart export yöntemi kullanılır.
+export default async function handler(req, res) {
+  // --- CORS Yönetimi ---
+  // Gelen her isteğin başında, asıl mantık çalışmadan CORS başlıkları ayarlanır.
   const allowedOrigins = [
     'https://dekorla.co',
     'https://dekorla.myshopify.com',
-    'https://admin.shopify.com', // Shopify tema düzenleyici için gerekli
+    'https://admin.shopify.com',
   ];
-  
   const origin = req.headers.origin;
-  
-  // Gelen isteğin kaynağı izin verilenler listesindeyse, başlığı dinamik olarak ayarla.
-  // Bu, Shopify önizleme modları da dahil olmak üzere esneklik sağlar.
+
+  // Gelen isteğin kaynağı izin verilenler listesindeyse veya bir Shopify önizleme alan adından geliyorsa,
+  // Access-Control-Allow-Origin başlığını isteğin geldiği kaynak olarak ayarla.
   if (allowedOrigins.includes(origin) || (origin && origin.endsWith('.myshopify.com'))) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Origin', origin);
   }
   
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
-  // Tarayıcılar, asıl POST isteğinden önce bir OPTIONS "preflight" isteği gönderir.
-  // Bu isteğe 204 (No Content) ile yanıt vererek devam etme izni vermiş oluruz.
+  // Tarayıcının gönderdiği "preflight" (ön kontrol) OPTIONS isteğine 204 (No Content) ile yanıt ver.
+  // Bu, asıl POST isteğinin gönderilmesi için izin verildiği anlamına gelir.
   if (req.method === 'OPTIONS') {
     res.status(204).end();
     return;
   }
-  
-  // CORS kontrolü yapıldıktan sonra asıl fonksiyonumuzu çalıştır.
-  return await fn(req, res);
-};
 
-// Asıl e-posta gönderme mantığını içeren fonksiyon
-const handler = async (req, res) => {
-  // Sadece POST isteklerini kabul et
+  // --- Asıl Fonksiyon Mantığı ---
+  // Sadece POST isteklerini kabul et.
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST', 'OPTIONS']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
@@ -46,7 +40,6 @@ const handler = async (req, res) => {
     // Vercel'in dahili body-parser'ı sayesinde JSON verisi doğrudan req.body'de mevcuttur.
     const submissionData = req.body;
 
-    // Gelen verinin beklenen yapıda olduğunu doğrula
     if (!submissionData || !submissionData.answers || !submissionData.subject) {
       return res.status(400).json({ error: 'Eksik veya hatalı veri yapısı.' });
     }
@@ -61,7 +54,6 @@ const handler = async (req, res) => {
       },
     });
 
-    // E-posta içeriğini oluştur
     let emailBody = `<h1>${submissionData.subject}</h1>`;
     emailBody += `<p><b>Yanıtlayan:</b> ${submissionData.replyTo}</p><hr>`;
     for (const [question, answer] of Object.entries(submissionData.answers)) {
@@ -82,9 +74,7 @@ const handler = async (req, res) => {
 
   } catch (error) {
     console.error('API Hatası:', error);
-    return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu: ' + error.message });
+    // Hata durumunda istemciye çok fazla detay vermeden genel bir mesaj gönder.
+    return res.status(500).json({ error: 'Sunucuda bir e-posta gönderme hatası oluştu.' });
   }
-};
-
-// Handler fonksiyonumuzu CORS middleware'i ile sarmalayarak dışa aktar.
-module.exports = allowCors(handler);
+}
