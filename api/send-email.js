@@ -1,45 +1,48 @@
 // /api/send-email.js
 const nodemailer = require('nodemailer');
 
-// Vercel API rotaları için standart export yöntemi kullanılır.
-export default async function handler(req, res) {
-  // --- CORS Yönetimi ---
-  // Gelen her isteğin başında, asıl mantık çalışmadan CORS başlıkları ayarlanır.
-  const allowedOrigins = [
-    'https://dekorla.co',
-    'https://dekorla.myshopify.com',
-    'https://admin.shopify.com',
-  ];
-  const origin = req.headers.origin;
+// --- CORS Middleware ---
+// Bu ara katman, gelen her isteği kontrol eder ve CORS başlıklarını ayarlar.
+const corsMiddleware = (req, res) => {
+  return new Promise((resolve) => {
+    const allowedOrigins = [
+      'https://dekorla.co',
+      'https://admin.shopify.com',
+    ];
+    const origin = req.headers.origin;
 
-  // Gelen isteğin kaynağı izin verilenler listesindeyse veya bir Shopify önizleme alan adından geliyorsa,
-  // Access-Control-Allow-Origin başlığını isteğin geldiği kaynak olarak ayarla.
-  if (allowedOrigins.includes(origin) || (origin && origin.endsWith('.myshopify.com'))) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    // Gelen isteğin kaynağı izin verilenler listesindeyse veya bir Shopify önizleme/admin alan adından geliyorsa izin ver.
+    // 'endsWith' kontrolü, Shopify'ın dinamik önizleme URL'lerini yakalamak için kritiktir.
+    if (allowedOrigins.includes(origin) || (origin && origin.endsWith('.myshopify.com'))) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
+    
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
 
-  // Tarayıcının gönderdiği "preflight" (ön kontrol) OPTIONS isteğine 204 (No Content) ile yanıt ver.
-  // Bu, asıl POST isteğinin gönderilmesi için izin verildiği anlamına gelir.
-  if (req.method === 'OPTIONS') {
-    res.status(204).end();
-    return;
-  }
+    // Tarayıcının gönderdiği "preflight" (ön kontrol) OPTIONS isteği ise,
+    // 204 (No Content) ile yanıt ver ve ana fonksiyona geçme.
+    if (req.method === 'OPTIONS') {
+      res.status(204).end();
+      // Middleware'in isteği sonlandırdığını belirtmek için 'true' resolve et.
+      return resolve(true); 
+    }
+    
+    // İstek OPTIONS değilse, ana fonksiyona devam edileceğini belirtmek için 'false' resolve et.
+    return resolve(false);
+  });
+};
 
-  // --- Asıl Fonksiyon Mantığı ---
-  // Sadece POST isteklerini kabul et.
+// --- E-posta Gönderme Fonksiyonu ---
+const sendEmailHandler = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST', 'OPTIONS']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
   try {
-    // Vercel'in dahili body-parser'ı sayesinde JSON verisi doğrudan req.body'de mevcuttur.
     const submissionData = req.body;
-
     if (!submissionData || !submissionData.answers || !submissionData.subject) {
       return res.status(400).json({ error: 'Eksik veya hatalı veri yapısı.' });
     }
@@ -74,7 +77,22 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('API Hatası:', error);
-    // Hata durumunda istemciye çok fazla detay vermeden genel bir mesaj gönder.
     return res.status(500).json({ error: 'Sunucuda bir e-posta gönderme hatası oluştu.' });
   }
-}
+};
+
+// --- Ana Handler ---
+// Vercel tarafından çağrılacak olan ana export budur.
+module.exports = async (req, res) => {
+  // Önce CORS middleware'ini çalıştır.
+  const isOptionsRequestHandled = await corsMiddleware(req, res);
+
+  // Eğer istek bir OPTIONS isteği idiyse ve middleware tarafından zaten sonlandırıldıysa,
+  // e-posta gönderme mantığına hiç girme.
+  if (isOptionsRequestHandled) {
+    return;
+  }
+
+  // İstek POST ise, e-posta gönderme fonksiyonunu çalıştır.
+  return await sendEmailHandler(req, res);
+};
