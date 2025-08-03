@@ -1,4 +1,3 @@
-
 // This script is designed to run after the main document and ALL resources (including theme scripts) are loaded.
 window.addEventListener('load', () => {
   try {
@@ -44,6 +43,7 @@ window.addEventListener('load', () => {
     const App = () => {
         const [answers, setAnswers] = useState(() => {
             const rootEl = document.getElementById('root');
+            // Shopify liquid'den gelen eposta adresini güvenli bir şekilde al
             const email = rootEl ? rootEl.dataset.customerEmail : null;
             return email ? { email: email } : {};
         });
@@ -103,7 +103,9 @@ window.addEventListener('load', () => {
                       'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(payload),
-                    credentials: 'include', // CORS kimlik bilgileri için gerekli
+                    // Tarayıcının kimlik bilgilerini (cookie gibi) CORS istekleriyle göndermesini sağlar.
+                    // Shopify oturumları için bu ayar önemlidir.
+                    credentials: 'include', 
                 });
 
                 if (response.ok) {
@@ -111,15 +113,17 @@ window.addEventListener('load', () => {
                 } else {
                     let errorData;
                     try {
+                        // Sunucudan gelen JSON formatındaki hatayı yakalamaya çalış
                         errorData = await response.json();
                     } catch (jsonError) {
+                         // Eğer sunucu JSON dönemezse, genel bir HTTP hatası oluştur
                         throw new Error(`HTTP Hata Kodu: ${response.status} - ${response.statusText || 'Bilinmeyen bir sunucu hatası.'}`);
                     }
                     const errorMessage = errorData?.error || 'Bilinmeyen bir hata oluştu. Lütfen tekrar deneyin.';
                     throw new Error(errorMessage);
                 }
             } catch (error) {
-                console.error("Fetch Error:", error);
+                console.error("Fetch Hatası:", error);
                 setSubmitError(`Gönderim başarısız oldu: ${error.message}. Lütfen ağ bağlantınızı kontrol edin ve tekrar deneyin. Sorun devam ederse, site yöneticisiyle iletişime geçin.`);
             } finally {
                 setIsSubmitting(false);
