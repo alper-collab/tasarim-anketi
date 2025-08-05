@@ -7,21 +7,25 @@ const fs = require('fs');
 const allowedOrigins = [
   'https://dekorla.co',
   'https://dekorla.myshopify.com',
-  'https://admin.shopify.com', // Shopify tema düzenleyicisi için eklendi
+  'https://admin.shopify.com',
 ];
 
 const handler = async (req, res) => {
-  // --- CORS Başlıklarını Manuel Olarak Ayarla ---
+  // --- CORS Başlıklarını Ayarla ---
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-     res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (process.env.NODE_ENV !== 'production') {
+    // Yerel geliştirme ortamları için daha esnek olabiliriz.
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
-  
+
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   // --- Preflight (OPTIONS) İsteğini Yönet ---
+  // Tarayıcı, asıl POST isteğini göndermeden önce bu isteği göndererek sunucunun CORS ayarlarını kontrol eder.
   if (req.method === 'OPTIONS') {
     res.status(204).end();
     return;
