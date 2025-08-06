@@ -1,10 +1,11 @@
-
 {
   "name": "dekorla-survey-mailer",
   "version": "1.0.0",
   "description": "Serverless function for sending survey emails.",
   "main": "api/send-email.js",
   "dependencies": {
-    "nodemailer": "^6.9.7"
+    "cors": "^2.8.5",
+    "nodemailer": "^6.9.7",
+    "formidable": "^3.5.1"
   }
 }
