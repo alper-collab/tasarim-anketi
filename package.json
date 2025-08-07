@@ -6,6 +6,6 @@
   "dependencies": {
     "cors": "^2.8.5",
     "nodemailer": "^6.9.7",
-    "formidable": "^3.5.1"
+    "formidable": "^2.1.2"
   }
 }

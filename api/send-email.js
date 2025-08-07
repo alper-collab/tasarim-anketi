@@ -1,7 +1,6 @@
 // /api/send-email.js
 const nodemailer = require('nodemailer');
-// GÜNCELLEME: 'formidable' yerine 'IncomingForm' sınıfını doğrudan içe aktar.
-const { IncomingForm } = require('formidable');
+const formidable = require('formidable');
 const fs = require('fs');
 
 // İzin verilen kaynakların (origin) güvenli listesi
@@ -13,6 +12,7 @@ const allowedOrigins = [
 const handler = async (req, res) => {
   // --- CORS Başlıklarını Manuel Olarak Ayarla ---
   const origin = req.headers.origin;
+  // Geliştirme ortamında veya izin verilenler listesindeyse izin ver
   if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
      res.setHeader('Access-Control-Allow-Origin', origin || '*');
   }
@@ -34,11 +34,18 @@ const handler = async (req, res) => {
   }
 
   try {
-    // GÜNCELLEME: formidable() yerine new IncomingForm() kullan.
-    const form = new IncomingForm({ multiples: true });
-    const [fields, files] = await form.parse(req);
+    // formidable v2 ile uyumlu hale getirildi.
+    const { fields, files } = await new Promise((resolve, reject) => {
+        const form = new formidable.IncomingForm({ multiples: true });
+        form.parse(req, (err, fields, files) => {
+            if (err) {
+                return reject(err);
+            }
+            resolve({ fields, files });
+        });
+    });
 
-    const submissionField = fields.submission?.[0];
+    const submissionField = fields.submission;
     if (!submissionField) {
         return res.status(400).json({ error: 'Eksik `submission` alanı.' });
     }
@@ -56,9 +63,6 @@ const handler = async (req, res) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      // HATA ÇÖZÜMÜ: "certificate has expired" gibi TLS hatalarını gidermek için.
-      // Bu, sunucunun sertifikası geçersiz olsa bile bağlantıya izin verir.
-      // Geliştirme ortamları için kullanışlıdır ancak üretimde dikkatli kullanılmalıdır.
       tls: {
         rejectUnauthorized: false
       },
@@ -69,17 +73,12 @@ const handler = async (req, res) => {
       emailBody += `<p><b>${question}:</b></p><p>${String(answer).replace(/\n/g, '<br>')}</p><hr>`;
     }
 
-    const attachments = [];
-    for (const fileKey in files) {
-        const fileArray = files[fileKey];
-        for (const file of fileArray) {
-            attachments.push({
-                filename: file.originalFilename,
-                content: fs.createReadStream(file.filepath),
-                contentType: file.mimetype,
-            });
-        }
-    }
+    // formidable v2'de 'files' nesnesinin yapısı farklıdır
+    const attachments = Object.values(files).flat().map(file => ({
+        filename: file.originalFilename,
+        path: file.filepath, // v2 'path' kullanır
+        contentType: file.mimetype,
+    }));
 
     const mailOptions = {
       from: `"Dekorla Anket" <${process.env.SMTP_SENDER_EMAIL}>`,
@@ -101,10 +100,15 @@ const handler = async (req, res) => {
 };
 
 // Vercel API route config to disable the default body parser
-handler.config = {
+const config = {
   api: {
     bodyParser: false,
   },
 };
 
-module.exports = handler;
+module.exports = process.env.NODE_ENV === 'production' 
+  ? (req, res) => {
+      Object.assign(req, { config });
+      return handler(req, res);
+    }
+  : Object.assign(handler, { config });
