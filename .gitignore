@@ -1,24 +1,20 @@
-# Logs
-logs
-*.log
+# Node.js bağımlılıkları
+# Bu klasör binlerce dosya içerir ve 'npm install' komutuyla yeniden oluşturulabilir.
+node_modules/
+
+# Hassas bilgileri içerebilecek yerel ortam değişkeni dosyaları
+.env
+.env.*
+!.env.example
+
+# İçinde şifre gibi hassas veriler barındıran SMTP test betiğimiz
+test-smtp.js
+
+# İşletim sistemi özel dosyaları
+.DS_Store
+Thumbs.db
+
+# Log dosyaları
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-pnpm-debug.log*
-lerna-debug.log*
-
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?

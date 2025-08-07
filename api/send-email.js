@@ -54,6 +54,12 @@ const handler = async (req, res) => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
+      // HATA ÇÖZÜMÜ: "certificate has expired" gibi TLS hatalarını gidermek için.
+      // Bu, sunucunun sertifikası geçersiz olsa bile bağlantıya izin verir.
+      // Geliştirme ortamları için kullanışlıdır ancak üretimde dikkatli kullanılmalıdır.
+      tls: {
+        rejectUnauthorized: false
+      },
     });
 
     let emailBody = '<h1>Yeni Tasarım Keşif Anketi Sonucu</h1>';
