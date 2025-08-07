@@ -1,6 +1,7 @@
 // /api/send-email.js
 const nodemailer = require('nodemailer');
-const formidable = require('formidable');
+// GÜNCELLEME: 'formidable' yerine 'IncomingForm' sınıfını doğrudan içe aktar.
+const { IncomingForm } = require('formidable');
 const fs = require('fs');
 
 // İzin verilen kaynakların (origin) güvenli listesi
@@ -33,7 +34,8 @@ const handler = async (req, res) => {
   }
 
   try {
-    const form = formidable({ multiples: true });
+    // GÜNCELLEME: formidable() yerine new IncomingForm() kullan.
+    const form = new IncomingForm({ multiples: true });
     const [fields, files] = await form.parse(req);
 
     const submissionField = fields.submission?.[0];
