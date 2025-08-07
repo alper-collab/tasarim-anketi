@@ -1,20 +1,23 @@
 // /api/send-email.js
 const nodemailer = require('nodemailer');
 const formidable = require('formidable');
-const fs = require('fs');
 
 // İzin verilen kaynakların (origin) güvenli listesi
 const allowedOrigins = [
   'https://dekorla.co',
   'https://dekorla.myshopify.com',
+  // Vercel'in kendi önizleme URL'lerini dinamik olarak eklemek için bir regex de kullanılabilir.
+  // Örnek: /tasarim-anketi-.*\.vercel\.app$/
 ];
 
 const handler = async (req, res) => {
-  // --- CORS Başlıklarını Manuel Olarak Ayarla ---
+  // --- CORS Başlıklarını Ayarla ---
   const origin = req.headers.origin;
-  // Geliştirme ortamında veya izin verilenler listesindeyse izin ver
   if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else if (origin && origin.endsWith('.vercel.app')) {
+     // Vercel önizleme dağıtımlarına izin ver
+     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -39,6 +42,7 @@ const handler = async (req, res) => {
         const form = new formidable.IncomingForm({ multiples: true });
         form.parse(req, (err, fields, files) => {
             if (err) {
+                console.error('Formidable parse error:', err);
                 return reject(err);
             }
             resolve({ fields, files });
@@ -76,7 +80,7 @@ const handler = async (req, res) => {
     // formidable v2'de 'files' nesnesinin yapısı farklıdır
     const attachments = Object.values(files).flat().map(file => ({
         filename: file.originalFilename,
-        path: file.filepath, // v2 'path' kullanır
+        path: file.filepath, // v2 'filepath' kullanır ('path' eski versiyonlardaydı)
         contentType: file.mimetype,
     }));
 
@@ -95,20 +99,20 @@ const handler = async (req, res) => {
 
   } catch (error) {
     console.error('API Hatası:', error);
+    // Hatanın mesajını döndürerek frontend'de daha iyi hata ayıklama sağla
     return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu: ' + error.message });
   }
 };
 
-// Vercel API route config to disable the default body parser
-const config = {
+// Vercel'e bu API rotası için varsayılan gövde ayrıştırıcısını
+// devre dışı bırakmasını söyleyen yapılandırma. Bu, 'formidable'ın
+// gelen isteği doğru bir şekilde işlemesi için gereklidir.
+// BU, SORUNUN ÇÖZÜMÜDÜR.
+export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-module.exports = process.env.NODE_ENV === 'production' 
-  ? (req, res) => {
-      Object.assign(req, { config });
-      return handler(req, res);
-    }
-  : Object.assign(handler, { config });
+// Ana işleyici fonksiyonunu varsayılan olarak dışa aktar.
+export default handler;
