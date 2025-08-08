@@ -1,4 +1,3 @@
-
 // This script is designed to run after the main document and ALL resources (including theme scripts) are loaded.
 window.addEventListener('load', () => {
   try {
@@ -180,6 +179,7 @@ window.addEventListener('load', () => {
                 controller.abort();
             }, 20000); // 20-saniye zaman aşımı
 
+            let response; // response'u try-catch dışında tanımla
             try {
                 const API_ENDPOINT = '/api/send-email';
 
@@ -202,13 +202,28 @@ window.addEventListener('load', () => {
                     answers: submissionData
                 }));
 
-                const response = await fetch(API_ENDPOINT, {
+                response = await fetch(API_ENDPOINT, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal,
                 });
                 
                 clearTimeout(timeoutId);
+
+                // --- DETAYLI YANIT LOGLAMASI ---
+                console.groupCollapsed('--- Sunucu Yanıtı Alındı ---');
+                console.log('Status:', response.status);
+                console.log('OK:', response.ok);
+                const responseForLog = response.clone();
+                try {
+                    const responseData = await responseForLog.json();
+                    console.log('Response Data (JSON):', responseData);
+                } catch (e) {
+                    const responseText = await responseForLog.text();
+                    console.log('Response Data (Text):', responseText);
+                }
+                console.groupEnd();
+                // --- LOGLAMA BİTTİ ---
 
                 if (response.ok) {
                     setView('submitted');
@@ -221,6 +236,13 @@ window.addEventListener('load', () => {
                     setSubmitError('Gönderim zaman aşımına uğradı. Lütfen tekrar deneyin.');
                 } else {
                     setSubmitError(`Gönderim başarısız oldu: ${error.message}. Lütfen ağ bağlantınızı kontrol edin ve tekrar deneyin.`);
+                }
+                 // Hata durumunda da yanıtı logla
+                if (response) {
+                    console.error("Hata oluştuğunda sunucu yanıtı:", {
+                        status: response.status,
+                        ok: response.ok,
+                    });
                 }
             } finally {
                 clearTimeout(timeoutId);

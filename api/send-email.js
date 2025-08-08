@@ -11,6 +11,8 @@ const allowedOrigins = [
 ];
 
 const handler = async (req, res) => {
+  console.log('--- API /send-email function started ---');
+
   // --- CORS Başlıklarını Ayarla ---
   const origin = req.headers.origin;
   if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
@@ -26,6 +28,7 @@ const handler = async (req, res) => {
 
   // --- Preflight (OPTIONS) İsteğini Yönet ---
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS preflight request.');
     res.status(204).end();
     return;
   }
@@ -37,7 +40,7 @@ const handler = async (req, res) => {
   }
 
   try {
-    // formidable v2 ile uyumlu hale getirildi.
+    console.log('Attempting to parse form data with formidable...');
     const { fields, files } = await new Promise((resolve, reject) => {
         const form = new formidable.IncomingForm({ multiples: true });
         form.parse(req, (err, fields, files) => {
@@ -45,19 +48,26 @@ const handler = async (req, res) => {
                 console.error('Formidable parse error:', err);
                 return reject(err);
             }
+            console.log('Form data parsed successfully.');
             resolve({ fields, files });
         });
     });
 
+    console.log('Parsed fields:', Object.keys(fields));
+    console.log('Number of files parsed:', Object.values(files).flat().length);
+
     const submissionField = fields.submission;
     if (!submissionField) {
+        console.error('Validation Error: Missing `submission` field.');
         return res.status(400).json({ error: 'Eksik `submission` alanı.' });
     }
     const submissionData = JSON.parse(submissionField);
       
     if (!submissionData || !submissionData.answers || !submissionData.subject) {
+      console.error('Validation Error: Incomplete or malformed survey data.');
       return res.status(400).json({ error: 'Eksik veya hatalı anket verisi.' });
     }
+    console.log('Submission data is valid.');
 
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -92,41 +102,38 @@ const handler = async (req, res) => {
       html: emailBody,
       attachments: attachments,
     };
-
+    
+    console.log(`Attempting to send email to admin: ${adminMailOptions.to}`);
     await transporter.sendMail(adminMailOptions);
+    console.log('Admin email sent successfully.');
     
     // ADIM 2: E-postayı kullanıcıya gönder
     const userEmail = submissionData.replyTo;
     if (userEmail && userEmail.includes('@')) {
+        const userConfirmationText = `Merhaba,\n\nDekorla tasarım keşif anketini doldurduğunuz için teşekkür ederiz. Cevaplarınızı aldık ve ekibimiz en kısa sürede sizinle iletişime geçecektir.\n\nTasarım yolculuğunuzda size eşlik etmek için sabırsızlanıyoruz.\n\nSaygılarımızla,\nDekorla Ekibi`;
         const userConfirmationOptions = {
             from: `"Dekorla Tasarım" <${process.env.SMTP_SENDER_EMAIL}>`,
             to: userEmail,
             subject: `Tasarım Keşif Anketiniz Alındı!`,
-            html: `
-                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-                    <h2 style="color: #1f2937;">Anketiniz için teşekkür ederiz!</h2>
-                    <p>Merhaba,</p>
-                    <p>Dekorla tasarım keşif anketini doldurduğunuz için teşekkür ederiz. Cevaplarınızı aldık ve ekibimiz en kısa sürede sizinle iletişime geçecektir.</p>
-                    <p>Tasarım yolculuğunuzda size eşlik etmek için sabırsızlanıyoruz.</p>
-                    <br>
-                    <p>Saygılarımızla,</p>
-                    <p><b>Dekorla Ekibi</b></p>
-                </div>
-            `,
+            text: userConfirmationText,
+            html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><h2 style="color: #1f2937;">Anketiniz için teşekkür ederiz!</h2><p>Merhaba,</p><p>Dekorla tasarım keşif anketini doldurduğunuz için teşekkür ederiz. Cevaplarınızı aldık ve ekibimiz en kısa sürede sizinle iletişime geçecektir.</p><p>Tasarım yolculuğunuzda size eşlik etmek için sabırsızlanıyoruz.</p><br><p>Saygılarımızla,</p><p><b>Dekorla Ekibi</b></p></div>`,
         };
         try {
+            console.log(`Attempting to send confirmation email to user: ${userEmail}`);
             await transporter.sendMail(userConfirmationOptions);
+            console.log('User confirmation email sent successfully.');
         } catch (userMailError) {
-            // Kullanıcıya giden e-posta başarısız olursa bunu sadece logla,
-            // ana isteği başarısız kılma çünkü yöneticiye mail gitti.
-            console.error(`Kullanıcı onay e-postası gönderilemedi (${userEmail}):`, userMailError);
+            console.error(`User confirmation email FAILED to send to ${userEmail}:`, userMailError);
         }
+    } else {
+        console.log('No valid user email found to send confirmation.');
     }
 
+    console.log('--- API /send-email function finished successfully ---');
     return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
 
   } catch (error) {
-    console.error('API Hatası:', error);
+    console.error('--- FATAL API ERROR ---:', error);
     return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu: ' + error.message });
   }
 };
