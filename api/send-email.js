@@ -77,14 +77,14 @@ const handler = async (req, res) => {
       emailBody += `<p><b>${question}:</b></p><p>${String(answer).replace(/\n/g, '<br>')}</p><hr>`;
     }
 
-    // formidable v2'de 'files' nesnesinin yapısı farklıdır
     const attachments = Object.values(files).flat().map(file => ({
         filename: file.originalFilename,
-        path: file.filepath, // v2 'filepath' kullanır ('path' eski versiyonlardaydı)
+        path: file.filepath,
         contentType: file.mimetype,
     }));
 
-    const mailOptions = {
+    // ADIM 1: E-postayı yöneticiye gönder
+    const adminMailOptions = {
       from: `"Dekorla Anket" <${process.env.SMTP_SENDER_EMAIL}>`,
       to: process.env.SMTP_RECIPIENT_EMAIL,
       subject: submissionData.subject,
@@ -93,26 +93,48 @@ const handler = async (req, res) => {
       attachments: attachments,
     };
 
-    await transporter.sendMail(mailOptions);
+    await transporter.sendMail(adminMailOptions);
     
+    // ADIM 2: E-postayı kullanıcıya gönder
+    const userEmail = submissionData.replyTo;
+    if (userEmail && userEmail.includes('@')) {
+        const userConfirmationOptions = {
+            from: `"Dekorla Tasarım" <${process.env.SMTP_SENDER_EMAIL}>`,
+            to: userEmail,
+            subject: `Tasarım Keşif Anketiniz Alındı!`,
+            html: `
+                <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                    <h2 style="color: #1f2937;">Anketiniz için teşekkür ederiz!</h2>
+                    <p>Merhaba,</p>
+                    <p>Dekorla tasarım keşif anketini doldurduğunuz için teşekkür ederiz. Cevaplarınızı aldık ve ekibimiz en kısa sürede sizinle iletişime geçecektir.</p>
+                    <p>Tasarım yolculuğunuzda size eşlik etmek için sabırsızlanıyoruz.</p>
+                    <br>
+                    <p>Saygılarımızla,</p>
+                    <p><b>Dekorla Ekibi</b></p>
+                </div>
+            `,
+        };
+        try {
+            await transporter.sendMail(userConfirmationOptions);
+        } catch (userMailError) {
+            // Kullanıcıya giden e-posta başarısız olursa bunu sadece logla,
+            // ana isteği başarısız kılma çünkü yöneticiye mail gitti.
+            console.error(`Kullanıcı onay e-postası gönderilemedi (${userEmail}):`, userMailError);
+        }
+    }
+
     return res.status(200).json({ success: true, message: 'Anket başarıyla gönderildi.' });
 
   } catch (error) {
     console.error('API Hatası:', error);
-    // Hatanın mesajını döndürerek frontend'de daha iyi hata ayıklama sağla
     return res.status(500).json({ error: 'Sunucuda beklenmedik bir hata oluştu: ' + error.message });
   }
 };
 
-// Vercel'e bu API rotası için varsayılan gövde ayrıştırıcısını
-// devre dışı bırakmasını söyleyen yapılandırma. Bu, 'formidable'ın
-// gelen isteği doğru bir şekilde işlemesi için gereklidir.
-// BU, SORUNUN ÇÖZÜMÜDÜR.
 export const config = {
   api: {
     bodyParser: false,
   },
 };
 
-// Ana işleyici fonksiyonunu varsayılan olarak dışa aktar.
 export default handler;
