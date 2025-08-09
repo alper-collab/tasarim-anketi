@@ -3,12 +3,12 @@
 const nodemailer = require('nodemailer');
 const formidable = require('formidable');
 
-// İzin verilen kaynakların (origin) güvenli listesi
+// Güvenlik için, Vercel'deki sunucunuzun yalnızca izin verilen alan adlarından gelen isteklere
+// yanıt vermesi önemlidir. Shopify mağazanızın URL'lerinin burada doğru listelendiğinden emin olun.
+// Vercel'in önizleme (preview) URL'leri kod tarafından otomatik olarak ele alınır.
 const allowedOrigins = [
-  'https://dekorla.co',
-  'https://dekorla.myshopify.com',
-  // Vercel'in kendi önizleme URL'lerini dinamik olarak eklemek için bir regex de kullanılabilir.
-  // Örnek: /tasarim-anketi-.*\.vercel\.app$/
+  'https://dekorla.co',              // Özel alan adınız
+  'https://dekorla.myshopify.com',  // Shopify mağaza adınız (gerekirse değiştirin)
 ];
 
 const handler = async (req, res) => {
@@ -16,7 +16,7 @@ const handler = async (req, res) => {
   const log = (message) => {
       const timestamp = new Date().toISOString();
       const logEntry = `${timestamp}: ${message}`;
-      console.log(logEntry); // Vercel için yine de logla, belki çalışır.
+      console.log(logEntry); // Vercel logları için
       logMessages.push(logEntry);
   };
   

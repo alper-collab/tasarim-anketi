@@ -186,7 +186,11 @@ window.addEventListener('load', () => {
 
             let response;
             try {
-                const API_ENDPOINT = '/api/send-email';
+                // ÖNEMLİ: Shopify'a entegre ederken bu satırı kendi Vercel URL'niz ile değiştirmeniz GEREKİR.
+                // Vercel'den aldığınız dağıtım URL'sini buraya yapıştırın.
+                // Örnek: const API_ENDPOINT = 'https://sizin-projeniz.vercel.app/api/send-email';
+                const API_ENDPOINT = 'https://your-vercel-deployment-url.vercel.app/api/send-email';
+
                 const formData = new FormData();
                 const submissionData = {};
                 const userEmail = answers['email'] || 'E-posta Belirtilmedi';
