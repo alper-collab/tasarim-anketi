@@ -1,3 +1,4 @@
+
 // /api/send-email.js
 const nodemailer = require('nodemailer');
 const formidable = require('formidable');
@@ -90,19 +91,48 @@ const handler = async (req, res) => {
     });
     log('Nodemailer transporter created.');
 
+    // --- E-posta İçeriğini ve Ekleri Oluştur ---
     let emailBody = '<h1>Yeni Tasarım Keşif Anketi Sonucu</h1>';
+    emailBody += '<p>Müşterinin verdiği yanıtlar aşağıdadır:</p><hr>';
+    
     for (const [question, answer] of Object.entries(submissionData.answers)) {
       emailBody += `<p><b>${question}:</b></p><p>${String(answer).replace(/\n/g, '<br>')}</p><hr>`;
     }
-    log('Email body constructed.');
+    log('Main email body constructed from answers.');
 
-    const attachments = Object.values(files).flat().map(file => ({
-        filename: file.originalFilename,
-        path: file.filepath,
-        contentType: file.mimetype,
-    }));
-    log(`${attachments.length} attachments prepared for admin email.`);
+    const attachments = [];
+    let attachmentsHtml = '<h2>Yüklenen Dosyalar</h2>';
+    const allFiles = Object.values(files).flat();
 
+    if (allFiles.length > 0) {
+        allFiles.forEach(file => {
+            const isImage = file.mimetype && file.mimetype.startsWith('image/');
+            const cid = isImage ? `${file.newFilename}@dekorla.co` : null;
+
+            attachments.push({
+                filename: file.originalFilename,
+                path: file.filepath,
+                contentType: file.mimetype,
+                cid: cid, // Sadece resimler için CID ekle
+            });
+
+            if (isImage) {
+                attachmentsHtml += `
+                    <p><b>${file.originalFilename}:</b></p>
+                    <img src="cid:${cid}" alt="${file.originalFilename}" style="max-width: 100%; height: auto; border: 1px solid #ddd; padding: 5px; margin-top: 5px;" />
+                    <hr>
+                `;
+            } else {
+                 attachmentsHtml += `<p><b>Ekli dosya:</b> ${file.originalFilename} (Resim olmadığı için e-postaya ek olarak eklenmiştir.)</p><hr>`;
+            }
+        });
+        log(`${attachments.length} attachments prepared. ${attachments.filter(a => a.cid).length} are inline images.`);
+        emailBody += attachmentsHtml;
+    } else {
+        log('No files uploaded.');
+    }
+
+    // --- Yönetici E-postasını Gönder ---
     const adminMailOptions = {
       from: `"Dekorla Anket" <${process.env.SMTP_SENDER_EMAIL}>`,
       to: process.env.SMTP_RECIPIENT_EMAIL,
@@ -116,15 +146,28 @@ const handler = async (req, res) => {
     await transporter.sendMail(adminMailOptions);
     log('Admin email sent successfully.');
     
+    // --- Kullanıcı Onay E-postasını Gönder ---
     const userEmail = submissionData.replyTo;
     if (userEmail && userEmail.includes('@')) {
-        const userConfirmationText = `Merhaba,\n\nDekorla tasarım keşif anketini doldurduğunuz için teşekkür ederiz. Cevaplarınızı aldık ve ekibimiz en kısa sürede sizinle iletişime geçecektir.\n\nTasarım yolculuğunuzda size eşlik etmek için sabırsızlanıyoruz.\n\nSaygılarımızla,\nDekorla Ekibi`;
+        const userGreetingHtml = `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                <h2 style="color: #1f2937;">Anketiniz için teşekkür ederiz!</h2>
+                <p>Merhaba,</p>
+                <p>Dekorla tasarım keşif anketini doldurduğunuz için teşekkür ederiz. Cevaplarınızın bir kopyasını aşağıda bulabilirsiniz. Ekibimiz en kısa sürede sizinle iletişime geçecektir.</p>
+                <p>Tasarım yolculuğunuzda size eşlik etmek için sabırsızlanıyoruz.</p>
+                <br>
+                <p>Saygılarımızla,</p>
+                <p><b>Dekorla Ekibi</b></p>
+            </div>
+            <hr>
+        `;
+        
         const userConfirmationOptions = {
             from: `"Dekorla Tasarım" <${process.env.SMTP_SENDER_EMAIL}>`,
             to: userEmail,
-            subject: `Tasarım Keşif Anketiniz Alındı!`,
-            text: userConfirmationText,
-            html: `<div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;"><h2 style="color: #1f2937;">Anketiniz için teşekkür ederiz!</h2><p>Merhaba,</p><p>Dekorla tasarım keşif anketini doldurduğunuz için teşekkür ederiz. Cevaplarınızı aldık ve ekibimiz en kısa sürede sizinle iletişime geçecektir.</p><p>Tasarım yolculuğunuzda size eşlik etmek için sabırsızlanıyoruz.</p><br><p>Saygılarımızla,</p><p><b>Dekorla Ekibi</b></p></div>`,
+            subject: `✓ Dekorla Tasarım Anketi Yanıtlarınız`,
+            html: userGreetingHtml + emailBody, // Kullanıcıya da anketin tam kopyasını gönder
+            attachments: attachments, // Ekleri kullanıcıya da gönder
         };
         try {
             log(`Attempting to send confirmation email to user: ${userEmail}`);
