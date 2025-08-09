@@ -1,3 +1,4 @@
+
 // This script is designed to run after the main document and ALL resources (including theme scripts) are loaded.
 window.addEventListener('load', () => {
   try {
@@ -10,101 +11,27 @@ window.addEventListener('load', () => {
     const { createRoot } = ReactDOM;
 
     const questions = [
-        {
-            id: 'fullName',
-            text: 'Adınız Soyadınız',
-            type: 'text',
-            required: true,
-            layout: 'horizontal',
-            placeholder: 'Adınızı ve soyadınızı girin'
-        },
-        {
-            id: 'email',
-            text: 'Email Adresiniz',
-            type: 'email',
-            required: true,
-            layout: 'horizontal'
-        },
-        {
-            id: 'phone',
-            text: 'Telefon Numaranız',
-            type: 'text',
-            required: true,
-            layout: 'horizontal',
-            placeholder: ' ör. 555 123 4567'
-        },
-        {
-            id: 'spaceType',
-            text: 'Tasarım yapılacak mekanın türü nedir?',
-            type: 'radio',
-            required: true,
-            layout: 'vertical',
-            options: ['Ev', 'Ofis', 'Mağaza', 'Restoran/Kafe', 'Diğer'],
-            hasOtherSpecify: true
-        },
-        {
-            id: 'rooms',
-            text: 'Hangi odalar veya alanlar için tasarım hizmeti düşünüyorsunuz?',
-            type: 'checkbox',
-            required: true,
-            layout: 'vertical',
-            options: ['Salon', 'Mutfak', 'Yatak Odası', 'Banyo', 'Çalışma Odası', 'Antre/Giriş', 'Teras/Balkon', 'Diğer'],
-            hasOtherSpecify: true
-        },
-        {
-            id: 'floorPlan',
-            text: 'Mevcut durum fotoğraflarını ve/veya mekanın ölçülü planını yükleyebilir misiniz?',
-            type: 'file',
-            required: false,
-            multiple: true,
-            accept: 'image/*,application/pdf,.zip,.rar',
-            layout: 'vertical'
-        },
-        {
-            id: 'designStyle',
-            text: 'Hangi tasarım stilini veya stillerini beğeniyorsunuz?',
-            type: 'checkbox',
-            required: true,
-            layout: 'vertical',
-            grid: true,
-            options: ['Modern', 'Minimalist', 'Klasik', 'Rustik/Country', 'Endüstriyel', 'Bohem', 'Eklektik (Farklı stillerin karışımı)', 'Bilmiyorum/Kararsızım']
-        },
-        {
-            id: 'colorPalette',
-            text: 'Renk paletinizde hangi tonları tercih edersiniz?',
-            type: 'checkbox',
-            required: true,
-            layout: 'vertical',
-            options: ['Nötr tonlar (beyaz, gri, bej)', 'Sıcak renkler (kırmızı, turuncu, sarı)', 'Soğuk renkler (mavi, yeşil, mor)', 'Pastel tonlar', 'Koyu ve dramatik renkler']
-        },
-        {
-            id: 'budget',
-            text: 'Tasarım süreci için ayırdığınız yaklaşık bütçe nedir?',
-            type: 'radio',
-            required: true,
-            layout: 'vertical',
-            options: ['50.000 TL - 100.000 TL', '100.000 TL - 250.000 TL', '250.000 TL - 500.000 TL', '500.000 TL ve üzeri', 'Bütçe belirtmek istemiyorum'],
-            hasOtherSpecify: false
-        },
-        {
-            id: 'timeline',
-            text: 'Projenin başlaması için hedeflediğiniz bir tarih var mı?',
-            type: 'text',
-            required: false,
-            layout: 'horizontal',
-            placeholder: 'ör. "1-2 ay içinde", "Mümkün olan en kısa sürede"'
-        },
-        {
-            id: 'notes',
-            text: 'İç mimarımıza iletmek istediğiniz başka bir notunuz var mı?',
-            type: 'textarea',
-            required: true,
-            layout: 'horizontal',
-            placeholder: 'Eklemek istediğiniz diğer detaylar...'
-        }
+        { id: 'email', text: 'Email', type: 'email', required: true, layout: 'horizontal' },
+        { id: 'photos', text: 'Mekanın farklı köşelerden çekilmiş fotoğraflarını yükler misin?', type: 'file', required: true, layout: 'vertical', multiple: true, accept: 'image/*,application/pdf', title: 'Fotoğraf Yükle', hint: 'Drag and drop files here' },
+        { id: 'floorPlan', text: 'Mekanın ölçülü planını bizimle paylaşır mısın?', type: 'file', required: true, layout: 'vertical', multiple: true, accept: 'image/*,application/pdf', title: 'Plan Yükle', hint: 'Drag and drop files here' },
+        { id: 'inspiration', text: 'Beğendiğin iç mekan örnekleri var mı?', type: 'file', required: true, layout: 'vertical', multiple: true, accept: 'image/*,application/pdf', title: 'Örnek Yükle', hint: 'Drag and drop files here' },
+        { id: 'atmosphere', text: 'Mekanda nasıl bir atmosfer hayal ediyorsun?', type: 'text', required: true, layout: 'horizontal' },
+        { id: 'users', text: 'Bu mekanı kimler kullanacak?', type: 'text', required: true, layout: 'horizontal' },
+        { id: 'functions', text: 'Seçtiğin mekan için eklemek istediğin işlev var mı?', type: 'checkbox', required: true, layout: 'vertical', grid: true, options: ['Dinlenme ve Uyuma', 'Oturma ve Misafir Ağırlama', 'Çalışma Alanı', 'Hobi alanı', 'Diğer'], hasOtherSpecify: true },
+        { id: 'activeHours', text: 'Günün hangi saatlerinde bu alanı aktif olarak kullanırsın?', type: 'checkbox', required: true, layout: 'vertical', grid: true, options: ['Sabah', 'Öğle', 'Akşam'] },
+        { id: 'problemsToSolve', text: 'Yaşam alanında çözmemizi istediğin bir konu var mı?', type: 'text', required: true, layout: 'horizontal' },
+        { id: 'residents', text: 'Evde çocuk ya da evcil hayvan var mı?', type: 'radio', required: true, layout: 'vertical', options: ['Sadece çocuk var', 'Sadece evcil hayvan var', 'Her ikisi de var', 'Her ikisi de yok'] },
+        { id: 'expectation', text: 'Tasarlanmasını istediğin mekanda en temel beklentin nedir?', type: 'text', required: true, layout: 'horizontal' },
+        { id: 'style', text: 'Sence seni en iyi yansıtan dekorasyon tarzı hangisi?', type: 'radio', required: true, layout: 'vertical', options: ['Modern', 'Bohem', 'İskandinav', 'Klasik', 'Diğer'], hasOtherSpecify: true },
+        { id: 'colors', text: 'Hangi renkleri/tonları ön planda görmek istersin?', type: 'checkbox', required: true, layout: 'vertical', grid: true, options: ['Beyaz Tonlar', 'Krem/Bej Tonları', 'Pastel Tonlar (pudra, mint vs.)', 'Koyu Tonlar (siyah, antrasit vs.)', 'Toprak Tonları (kahve, kum vs.)', 'Canlı Renkler (sarı, turuncu vs.)', 'Diğer'], hasOtherSpecify: true },
+        { id: 'materials', text: 'Hangi malzeme tarzı sana daha yakın?', type: 'radio', required: true, layout: 'vertical', options: ['Doğal Malzemeler (ahşap, taş, keten vs.)', 'Modern Malzeme (cam, metal, kaplama yüzeyler vs.)', 'İkisinin dengesi olsun isterim'] },
+        { id: 'fabric', text: 'Kumaş seçiminde özel bir isteğin ya da hassasiyetin var mı?', type: 'text', required: true, layout: 'horizontal' },
+        { id: 'budget', text: 'Bu proje için düşündüğün yaklaşık bütçeyi paylaşır mısın?', type: 'radio', required: true, layout: 'vertical', options: ['70.000 TL - 110.000 TL', '110.000 TL - 130.000 TL', '130.000 TL - 150.000 TL'] },
+        { id: 'priority', text: 'Mekan içerisinde senin için en öncelikli olan ne?', type: 'radio', required: true, layout: 'vertical', options: ['Görsellik', 'İşlevsellik', 'Konfor'] },
+        { id: 'finalNotes', text: 'İç mimarımıza iletmek istediğin bir notun var mı?', type: 'textarea', required: true, layout: 'horizontal' }
     ];
     
-    const FileUpload = ({ question, value, onChange }) => {
+    const FileUpload = ({ question, value, onChange, title, hint }) => {
         const handleFileChange = (e) => {
             const files = Array.from(e.target.files);
             onChange(question.id, question.multiple ? [...(value || []), ...files] : [files[0]]);
@@ -130,23 +57,24 @@ window.addEventListener('load', () => {
             createElement("div", { className: "file-upload-content" },
                 createElement("svg", {
                     xmlns: "http://www.w3.org/2000/svg",
-                    width: "32",
-                    height: "32",
+                    width: "48",
+                    height: "48",
                     viewBox: "0 0 24 24",
                     fill: "none",
                     stroke: "currentColor",
-                    strokeWidth: "1.5",
+                    strokeWidth: "1",
+                    strokeLinecap: "round",
+                    strokeLinejoin: "round",
                     className: "upload-icon"
                 }, 
-                    createElement("path", { d: "M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" }),
-                    createElement("path", { d: "M12 12v9" }),
-                    createElement("path", { d: "m16 16-4-4-4 4" })
+                    createElement("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+                    createElement("polyline", { points: "17 8 12 3 7 8" }),
+                    createElement("line", { x1: "12", y1: "3", x2: "12", y2: "15" })
                 ),
                 createElement("div", { className: "file-upload-texts" },
-                    createElement("span", { className: "upload-text" }, "Dosyaları sürükleyip bırakın"),
-                    createElement("span", { className: "upload-hint" }, "veya tıklayarak seçin. Maks: 128MB")
-                ),
-                createElement("span", { className: "file-upload-button" }, "FOTOĞRAF YÜKLE")
+                    createElement("span", { className: "upload-text" }, title || "Dosya Yükle"),
+                    createElement("span", { className: "upload-hint" }, hint || "Sürükleyip bırakın veya seçin")
+                )
             ),
             createElement("input", {
                 id: inputId,
@@ -372,7 +300,7 @@ window.addEventListener('load', () => {
         const handleStart = () => setView('survey');
 
         const renderQuestion = () => {
-            const { id, type, options, placeholder, hasOtherSpecify, grid } = currentQuestion;
+            const { id, type, options, placeholder, hasOtherSpecify, grid, title, hint } = currentQuestion;
             const value = answers[id];
             const containerClass = grid ? "options-grid" : "options-container";
 
@@ -413,7 +341,13 @@ window.addEventListener('load', () => {
                         hasOtherSpecify && value && value['Diğer'] && createElement("input", { type: "text", className: "text-input other-specify-input", placeholder: "Lütfen belirtin...", value: answers[`${id}_other`] || '', onChange: (e) => handleAnswerChange(`${id}_other`, e.target.value) })
                     );
                 case 'file':
-                     return createElement(FileUpload, { question: currentQuestion, value: value || [], onChange: handleAnswerChange });
+                     return createElement(FileUpload, { 
+                         question: currentQuestion, 
+                         value: value || [], 
+                         onChange: handleAnswerChange,
+                         title: title,
+                         hint: hint
+                    });
                 default:
                     return null;
             }

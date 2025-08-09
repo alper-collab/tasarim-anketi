@@ -225,7 +225,7 @@ body main h1:first-of-type {
   line-height: 1.4;
 }
 
-/* Dosya Yükleme - Yeni Tasarım */
+/* Dosya Yükleme - Jotform Stili */
 #root .file-upload-wrapper {
   width: 100%;
 }
@@ -237,11 +237,11 @@ body main h1:first-of-type {
   align-items: center;
   border: 2px dashed var(--border-color);
   border-radius: 0.75rem;
-  padding: 1.5rem;
+  padding: 2.5rem; /* Daha fazla dikey boşluk */
   cursor: pointer;
   transition: border-color 0.2s, background-color 0.2s;
   text-align: center;
-  background-color: #fafafa;
+  background-color: #fcfcfc;
 }
 
 #root .file-upload-container:hover {
@@ -249,28 +249,32 @@ body main h1:first-of-type {
   background-color: #f5f8ff;
 }
 
+/* İçeriği dikey ve ortalı yapar */
 #root .file-upload-content {
   display: flex;
+  flex-direction: column;
+  justify-content: center;
   align-items: center;
-  gap: 1.5rem;
+  gap: 0.75rem; /* Elemanlar arası boşluk */
   width: 100%;
 }
 
 #root .file-upload-content .upload-icon {
-  color: var(--accent-color);
-  flex-shrink: 0;
+  color: var(--text-light);
+  width: 48px;
+  height: 48px;
 }
 
 #root .file-upload-texts {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
+  align-items: center;
+  text-align: center;
 }
 
 #root .file-upload-content .upload-text {
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 1.125rem; /* Başlık metni büyütüldü */
   color: var(--text-color);
 }
 
@@ -279,20 +283,9 @@ body main h1:first-of-type {
   color: var(--text-light);
 }
 
+/* Buton artık kullanılmıyor, gizli */
 #root .file-upload-button {
-  margin-left: auto;
-  background-color: var(--accent-color);
-  color: white;
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.5rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-  white-space: nowrap;
-  transition: background-color 0.2s;
-}
-
-#root .file-upload-container:hover .file-upload-button {
-  background-color: var(--accent-color-hover);
+  display: none;
 }
 
 #root .file-input-hidden {
