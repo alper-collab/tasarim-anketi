@@ -9,21 +9,100 @@ window.addEventListener('load', () => {
     const { useState, useMemo, useCallback, createElement, Fragment } = React;
     const { createRoot } = ReactDOM;
 
-    // SORUN GİDERME İÇİN BASİTLEŞTİRİLDİ: Sadece 2 soru aktif.
-    const questions = [{
-        id: 'email',
-        text: 'Email Adresiniz',
-        type: 'email',
-        required: true,
-        layout: 'horizontal'
-    }, {
-        id: 'notes',
-        text: 'İç mimarımıza iletmek istediğiniz bir notunuz var mı?',
-        type: 'textarea',
-        required: true,
-        layout: 'horizontal',
-        placeholder: 'Eklemek istediğiniz diğer detaylar...'
-    }];
+    const questions = [
+        {
+            id: 'fullName',
+            text: 'Adınız Soyadınız',
+            type: 'text',
+            required: true,
+            layout: 'horizontal',
+            placeholder: 'Adınızı ve soyadınızı girin'
+        },
+        {
+            id: 'email',
+            text: 'Email Adresiniz',
+            type: 'email',
+            required: true,
+            layout: 'horizontal'
+        },
+        {
+            id: 'phone',
+            text: 'Telefon Numaranız',
+            type: 'text',
+            required: true,
+            layout: 'horizontal',
+            placeholder: ' ör. 555 123 4567'
+        },
+        {
+            id: 'spaceType',
+            text: 'Tasarım yapılacak mekanın türü nedir?',
+            type: 'radio',
+            required: true,
+            layout: 'vertical',
+            options: ['Ev', 'Ofis', 'Mağaza', 'Restoran/Kafe', 'Diğer'],
+            hasOtherSpecify: true
+        },
+        {
+            id: 'rooms',
+            text: 'Hangi odalar veya alanlar için tasarım hizmeti düşünüyorsunuz?',
+            type: 'checkbox',
+            required: true,
+            layout: 'vertical',
+            options: ['Salon', 'Mutfak', 'Yatak Odası', 'Banyo', 'Çalışma Odası', 'Antre/Giriş', 'Teras/Balkon', 'Diğer'],
+            hasOtherSpecify: true
+        },
+        {
+            id: 'floorPlan',
+            text: 'Mevcut durum fotoğraflarını ve/veya mekanın ölçülü planını yükleyebilir misiniz?',
+            type: 'file',
+            required: false,
+            multiple: true,
+            accept: 'image/*,application/pdf,.zip,.rar',
+            layout: 'vertical'
+        },
+        {
+            id: 'designStyle',
+            text: 'Hangi tasarım stilini veya stillerini beğeniyorsunuz?',
+            type: 'checkbox',
+            required: true,
+            layout: 'vertical',
+            grid: true,
+            options: ['Modern', 'Minimalist', 'Klasik', 'Rustik/Country', 'Endüstriyel', 'Bohem', 'Eklektik (Farklı stillerin karışımı)', 'Bilmiyorum/Kararsızım']
+        },
+        {
+            id: 'colorPalette',
+            text: 'Renk paletinizde hangi tonları tercih edersiniz?',
+            type: 'checkbox',
+            required: true,
+            layout: 'vertical',
+            options: ['Nötr tonlar (beyaz, gri, bej)', 'Sıcak renkler (kırmızı, turuncu, sarı)', 'Soğuk renkler (mavi, yeşil, mor)', 'Pastel tonlar', 'Koyu ve dramatik renkler']
+        },
+        {
+            id: 'budget',
+            text: 'Tasarım süreci için ayırdığınız yaklaşık bütçe nedir?',
+            type: 'radio',
+            required: true,
+            layout: 'vertical',
+            options: ['50.000 TL - 100.000 TL', '100.000 TL - 250.000 TL', '250.000 TL - 500.000 TL', '500.000 TL ve üzeri', 'Bütçe belirtmek istemiyorum'],
+            hasOtherSpecify: false
+        },
+        {
+            id: 'timeline',
+            text: 'Projenin başlaması için hedeflediğiniz bir tarih var mı?',
+            type: 'text',
+            required: false,
+            layout: 'horizontal',
+            placeholder: 'ör. "1-2 ay içinde", "Mümkün olan en kısa sürede"'
+        },
+        {
+            id: 'notes',
+            text: 'İç mimarımıza iletmek istediğiniz başka bir notunuz var mı?',
+            type: 'textarea',
+            required: true,
+            layout: 'horizontal',
+            placeholder: 'Eklemek istediğiniz diğer detaylar...'
+        }
+    ];
     
     const FileUpload = ({ question, value, onChange }) => {
         const handleFileChange = (e) => {
@@ -175,25 +254,59 @@ window.addEventListener('load', () => {
             setSubmitError(null);
 
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => {
-                controller.abort();
-            }, 20000); // 20-saniye zaman aşımı
+            const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-            let response; // response'u try-catch dışında tanımla
+            let response;
             try {
                 const API_ENDPOINT = '/api/send-email';
-
                 const formData = new FormData();
                 const submissionData = {};
                 const userEmail = answers['email'] || 'E-posta Belirtilmedi';
 
                 questions.forEach(q => {
                     const answer = answers[q.id];
-                    if (answer === undefined || answer === null || (typeof answer === 'string' && answer.trim() === '')) {
-                        submissionData[q.text] = "Cevaplanmadı";
-                    } else {
-                        submissionData[q.text] = answer;
+                    let formattedAnswer = "Cevaplanmadı";
+
+                    if (answer !== undefined && answer !== null && answer !== '') {
+                        switch (q.type) {
+                            case 'file':
+                                if (Array.isArray(answer) && answer.length > 0) {
+                                    formattedAnswer = `${answer.length} dosya yüklendi: ${answer.map(f => f.name).join(', ')}`;
+                                    answer.forEach(file => formData.append(q.id, file, file.name));
+                                } else {
+                                    formattedAnswer = "Dosya yüklenmedi";
+                                }
+                                break;
+                            case 'checkbox':
+                                if (typeof answer === 'object' && Object.values(answer).some(v => v)) {
+                                    const selectedOptions = Object.entries(answer)
+                                        .filter(([, checked]) => checked)
+                                        .map(([opt]) => opt);
+
+                                    if (q.hasOtherSpecify && selectedOptions.includes('Diğer')) {
+                                        const otherValue = answers[`${q.id}_other`];
+                                        const otherIndex = selectedOptions.indexOf('Diğer');
+                                        selectedOptions[otherIndex] = `Diğer (${otherValue || 'belirtilmedi'})`;
+                                    }
+                                    formattedAnswer = selectedOptions.join(', ');
+                                }
+                                break;
+                            case 'radio':
+                                if (q.hasOtherSpecify && answer === 'Diğer') {
+                                    const otherValue = answers[`${q.id}_other`];
+                                    formattedAnswer = `Diğer (${otherValue || 'belirtilmedi'})`;
+                                } else {
+                                    formattedAnswer = answer;
+                                }
+                                break;
+                            default: // text, textarea, email
+                                if (typeof answer === 'string' && answer.trim() !== '') {
+                                    formattedAnswer = answer.trim();
+                                }
+                                break;
+                        }
                     }
+                    submissionData[q.text] = formattedAnswer;
                 });
 
                 formData.append('submission', JSON.stringify({
@@ -207,10 +320,9 @@ window.addEventListener('load', () => {
                     body: formData,
                     signal: controller.signal,
                 });
-                
+
                 clearTimeout(timeoutId);
 
-                // --- DETAYLI YANIT LOGLAMASI ---
                 console.groupCollapsed('--- Sunucu Yanıtı Alındı ---');
                 console.log('Status:', response.status);
                 console.log('OK:', response.ok);
@@ -223,7 +335,6 @@ window.addEventListener('load', () => {
                     console.log('Response Data (Text):', responseText);
                 }
                 console.groupEnd();
-                // --- LOGLAMA BİTTİ ---
 
                 if (response.ok) {
                     setView('submitted');
@@ -237,12 +348,8 @@ window.addEventListener('load', () => {
                 } else {
                     setSubmitError(`Gönderim başarısız oldu: ${error.message}. Lütfen ağ bağlantınızı kontrol edin ve tekrar deneyin.`);
                 }
-                 // Hata durumunda da yanıtı logla
                 if (response) {
-                    console.error("Hata oluştuğunda sunucu yanıtı:", {
-                        status: response.status,
-                        ok: response.ok,
-                    });
+                    console.error("Hata oluştuğunda sunucu yanıtı:", { status: response.status, ok: response.ok });
                 }
             } finally {
                 clearTimeout(timeoutId);
@@ -265,8 +372,9 @@ window.addEventListener('load', () => {
         const handleStart = () => setView('survey');
 
         const renderQuestion = () => {
-            const { id, type, options, placeholder, hasOtherSpecify } = currentQuestion;
+            const { id, type, options, placeholder, hasOtherSpecify, grid } = currentQuestion;
             const value = answers[id];
+            const containerClass = grid ? "options-grid" : "options-container";
 
             switch (type) {
                 case 'text':
@@ -286,8 +394,27 @@ window.addEventListener('load', () => {
                         onChange: (e) => handleAnswerChange(id, e.target.value),
                         placeholder: placeholder || "Cevabınızı buraya yazın..."
                     });
+                case 'radio':
+                    return createElement("div", { className: containerClass },
+                        options.map(option => createElement("label", { key: option, className: "choice-label" },
+                            createElement("input", { type: "radio", name: id, value: option, checked: value === option, onChange: (e) => (hasOtherSpecify ? handleRadioChange : handleAnswerChange)(id, e.target.value) }),
+                            createElement("span", { className: "custom-control custom-radio" }),
+                            createElement("span", { className: "choice-text" }, option)
+                        )),
+                        hasOtherSpecify && value === 'Diğer' && createElement("input", { type: "text", className: "text-input other-specify-input", placeholder: "Lütfen belirtin...", value: answers[`${id}_other`] || '', onChange: (e) => handleAnswerChange(`${id}_other`, e.target.value) })
+                    );
+                case 'checkbox':
+                    return createElement("div", { className: containerClass },
+                        options.map(option => createElement("label", { key: option, className: "choice-label" },
+                            createElement("input", { type: "checkbox", name: option, checked: !!(value && value[option]), onChange: () => handleCheckboxChange(id, option) }),
+                            createElement("span", { className: "custom-control custom-checkbox" }),
+                            createElement("span", { className: "choice-text" }, option)
+                        )),
+                        hasOtherSpecify && value && value['Diğer'] && createElement("input", { type: "text", className: "text-input other-specify-input", placeholder: "Lütfen belirtin...", value: answers[`${id}_other`] || '', onChange: (e) => handleAnswerChange(`${id}_other`, e.target.value) })
+                    );
+                case 'file':
+                     return createElement(FileUpload, { question: currentQuestion, value: value || [], onChange: handleAnswerChange });
                 default:
-                    // Diğer soru tipleri bu basit sürümde kullanılmıyor.
                     return null;
             }
         };
