@@ -2,64 +2,55 @@
 // /api/send-email.js
 const nodemailer = require('nodemailer');
 const formidable = require('formidable');
-const cors = require('cors');
 
-// --- CORS Ayarları ---
-// İzin verilen alan adlarını ve desenlerini tanımla. Bu, canlı sitenizden, tüm
-// Shopify önizleme alanlarından ve Vercel önizleme alanlarından gelen isteklere izin verir.
+// İzin verilen alan adları. Bu adreslerden gelen isteklere izin verilecektir.
 const allowedOrigins = [
   'https://dekorla.co',
   /https:\/\/.*\.myshopify\.com$/,
   /https:\/\/.*\.vercel\.app$/,
 ];
 
-const corsMiddleware = cors({
-  origin: (origin, callback) => {
-    // Köken (origin) yoksa (örneğin mobil uygulamalar, sunucu-sunucu istekleri) veya
-    // izin verilenler listesindeyse isteğe izin ver.
-    if (!origin || allowedOrigins.some(o => (typeof o === 'string' ? o === origin : o.test(origin)))) {
-      callback(null, true);
-    } else {
-      console.error(`CORS Hatası: ${origin} adresine izin verilmiyor.`);
-      callback(new Error('Bu alan adından gelen isteklere CORS politikası tarafından izin verilmiyor.'));
-    }
-  },
-  credentials: true,
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-});
-
-// Middleware'i çalıştırmak için bir yardımcı fonksiyon
-const runMiddleware = (req, res, fn) => {
-  return new Promise((resolve, reject) => {
-    fn(req, res, (result) => {
-      if (result instanceof Error) {
-        return reject(result);
-      }
-      return resolve(result);
-    });
-  });
-};
-
 const handler = async (req, res) => {
-  try {
-    // CORS middleware'ini her istekten önce çalıştır.
-    await runMiddleware(req, res, corsMiddleware);
-  } catch (corsError) {
-    return res.status(403).json({ error: corsError.message });
+  const origin = req.headers.origin;
+  let isAllowed = false;
+
+  // Gelen isteğin kaynağının izin verilenler listesinde olup olmadığını kontrol et
+  if (origin) {
+    isAllowed = allowedOrigins.some(o => (typeof o === 'string' ? o === origin : o.test(origin)));
   }
 
-  // Tarayıcının gönderdiği OPTIONS ön kontrol isteğini `cors` kütüphanesi otomatik yönetir.
-  // Bu isteğe 204 (No Content) ile yanıt verip işlemi sonlandırıyoruz.
+  // Eğer kaynak izin verilenler listesindeyse, CORS başlıklarını ayarla
+  if (isAllowed) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  }
+
+  // Tarayıcıların gönderdiği güvenlik ön kontrol isteğini (preflight) yönet
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    if (isAllowed) {
+      // İstek izin verilen bir kaynaktan geliyorsa, 204 (No Content) ile yanıt ver.
+      // Tarayıcı bu yanıtı alınca asıl POST isteğini gönderecektir.
+      return res.status(204).end();
+    } else {
+      // İzin verilmeyen bir kaynaktan geliyorsa, hatayla yanıt ver.
+      return res.status(403).json({ error: 'Origin not allowed' });
+    }
   }
 
+  // Eğer istek izin verilmeyen bir kaynaktan geliyorsa, işlemi durdur.
+  if (!isAllowed) {
+    return res.status(403).json({ error: `Origin '${origin}' is not in the allowed list.` });
+  }
+
+  // Sadece POST metotlarına izin ver
   if (req.method !== 'POST') {
     res.setHeader('Allow', ['POST', 'OPTIONS']);
     return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
+  // --- Form verilerini işleme ve e-posta gönderme ---
   try {
     const { fields, files } = await new Promise((resolve, reject) => {
         const form = new formidable.IncomingForm({ multiples: true });
