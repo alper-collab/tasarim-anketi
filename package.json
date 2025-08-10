@@ -1,6 +1,7 @@
 {
   "name": "dekorla-survey-mailer",
   "version": "1.0.0",
+  "type": "module",
   "description": "Serverless function for sending survey emails.",
   "main": "api/send-email.js",
   "dependencies": {

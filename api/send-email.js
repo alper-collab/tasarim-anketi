@@ -1,7 +1,8 @@
 
+
 // /api/send-email.js
-const nodemailer = require('nodemailer');
-const formidable = require('formidable');
+import nodemailer from 'nodemailer';
+import formidable from 'formidable';
 
 // İzin verilen alan adları. Bu adreslerden gelen isteklere izin verilecektir.
 const allowedOrigins = [
