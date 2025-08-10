@@ -1,14 +1,14 @@
 
+
 // /api/send-email.js
 const nodemailer = require('nodemailer');
 const formidable = require('formidable');
 
 // Güvenlik için, Vercel'deki sunucunuzun yalnızca izin verilen alan adlarından gelen isteklere
-// yanıt vermesi önemlidir. Shopify mağazanızın URL'lerinin burada doğru listelendiğinden emin olun.
-// Vercel'in önizleme (preview) URL'leri kod tarafından otomatik olarak ele alınır.
+// yanıt vermesi önemlidir. Ana alan adınız burada listelenmiştir. Shopify ve Vercel önizleme
+// alan adları ise kod tarafından dinamik olarak ele alınır.
 const allowedOrigins = [
-  'https://dekorla.co',              // Özel alan adınız
-  'https://dekorla.myshopify.com',  // Shopify mağaza adınız (gerekirse değiştirin)
+  'https://dekorla.co', // Sadece ana üretim alan adınız
 ];
 
 const handler = async (req, res) => {
@@ -22,12 +22,30 @@ const handler = async (req, res) => {
   
   log('--- API /send-email function started ---');
 
-  // --- CORS Başlıklarını Ayarla ---
+  // --- Gelişmiş CORS Başlıklarını Ayarla ---
   const origin = req.headers.origin;
-  if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
-     res.setHeader('Access-Control-Allow-Origin', origin || '*');
-  } else if (origin && origin.endsWith('.vercel.app')) {
-     res.setHeader('Access-Control-Allow-Origin', origin);
+  let isAllowed = false;
+
+  if (origin) {
+      if (allowedOrigins.includes(origin)) {
+          isAllowed = true;
+          log(`CORS: Origin ${origin} is allowed (static list).`);
+      } else if (origin.endsWith('.vercel.app')) {
+          isAllowed = true;
+          log(`CORS: Origin ${origin} is allowed (Vercel preview).`);
+      } else if (origin.endsWith('.myshopify.com')) {
+          isAllowed = true;
+          log(`CORS: Origin ${origin} is allowed (Shopify URL).`);
+      }
+  } else if (process.env.NODE_ENV !== 'production') {
+      isAllowed = true;
+      log('CORS: Request with no origin allowed in non-production environment.');
+  }
+
+  if (isAllowed) {
+      res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else if (origin) {
+      log(`CORS ERROR: Origin ${origin} is NOT allowed.`);
   }
   
   res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -36,7 +54,11 @@ const handler = async (req, res) => {
 
   if (req.method === 'OPTIONS') {
     log('Handling OPTIONS preflight request.');
-    res.status(204).end();
+    if (isAllowed) {
+        res.status(204).end();
+    } else {
+        res.status(403).json({ error: 'Origin not allowed' });
+    }
     return;
   }
 
