@@ -1,4 +1,5 @@
 
+
 // This script is designed to run after the main document and ALL resources (including theme scripts) are loaded.
 window.addEventListener('load', () => {
   try {
@@ -186,10 +187,8 @@ window.addEventListener('load', () => {
 
             let response;
             try {
-                // ÖNEMLİ: Shopify'a entegre ederken bu satırı kendi Vercel URL'niz ile değiştirmeniz GEREKİR.
-                // Vercel'den aldığınız dağıtım URL'sini buraya yapıştırın.
-                // Örnek: const API_ENDPOINT = 'https://sizin-projeniz.vercel.app/api/send-email';
-                const API_ENDPOINT = 'https://tasarim-anketi-lx813x0t7-alper-boyers-projects.vercel.app/api/send-email';
+                // E-posta gönderimi için Vercel'de barındırılan sunucunun adresi.
+                const API_ENDPOINT = 'https://tasarim-anketi-1x813x0t7-alper-boyers-projects.vercel.app/api/send-email';
 
                 const formData = new FormData();
                 const submissionData = {};
