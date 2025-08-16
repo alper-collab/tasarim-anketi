@@ -3,42 +3,33 @@
 const nodemailer = require('nodemailer');
 const formidable = require('formidable');
 
+// İzin verilen kaynakların (origin) güvenli listesi
+const allowedOrigins = [
+  'https://dekorla.co',
+  'https://dekorla.myshopify.com',
+  // Vercel'in kendi önizleme URL'lerini dinamik olarak eklemek için bir regex de kullanılabilir.
+  // Örnek: /tasarim-anketi-.*\.vercel\.app$/
+];
+
 const handler = async (req, res) => {
   const logMessages = [];
   const log = (message) => {
       const timestamp = new Date().toISOString();
       const logEntry = `${timestamp}: ${message}`;
-      console.log(logEntry); // Vercel for logging
+      console.log(logEntry); // Vercel için yine de logla, belki çalışır.
       logMessages.push(logEntry);
   };
   
   log('--- API /send-email function started ---');
 
-  // --- CORS Başlıklarını Ayarla (Shopify Entegrasyonu için Güncellendi) ---
-  const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
-    .split(',')
-    .map(s => s.trim())
-    .filter(Boolean); // Boş dizeleri kaldır
-
+  // --- CORS Başlıklarını Ayarla ---
   const origin = req.headers.origin;
-  let isAllowed = allowedOrigins.includes(origin);
-
-  // Vercel önizleme URL'lerine dinamik olarak izin ver
-  if (!isAllowed && origin && origin.endsWith('.vercel.app')) {
-      isAllowed = true;
+  if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== 'production') {
+     res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  } else if (origin && origin.endsWith('.vercel.app')) {
+     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   
-  // Geliştirme ortamında daha kolay test için izin ver
-  if (!isAllowed && process.env.NODE_ENV !== 'production') {
-      isAllowed = true;
-  }
-  
-  if (isAllowed) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (origin) {
-      log(`CORS Error: Origin "${origin}" is not in the allowed list.`);
-  }
-
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
