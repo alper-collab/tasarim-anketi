@@ -1,5 +1,4 @@
 
-
 // This script is designed to run after the main document and ALL resources (including theme scripts) are loaded.
 window.addEventListener('load', () => {
   try {
@@ -187,9 +186,7 @@ window.addEventListener('load', () => {
 
             let response;
             try {
-                // E-posta gönderimi için Vercel'de barındırılan sunucunun adresi.
-                const API_ENDPOINT = 'https://tasarim-anketi-1x813x0t7-alper-boyers-projects.vercel.app/api/send-email';
-
+                const API_ENDPOINT = '/api/send-email';
                 const formData = new FormData();
                 const submissionData = {};
                 const userEmail = answers['email'] || 'E-posta Belirtilmedi';
